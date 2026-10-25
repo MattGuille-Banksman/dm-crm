@@ -19,6 +19,8 @@ Reserved
 
 7xx::
 Reserved for extensions
++
+`750_crm` holds the CRM + email marketing foundation, see `docs/crm/README.md`.
 
 8xx::
 Reserved for custom/user configuration

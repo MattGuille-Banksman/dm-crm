@@ -1,0 +1,280 @@
+# Reporting charts used by the dashboard pages (1400_pages.yaml)
+namespace: crm
+charts:
+
+  # --- Pipeline revenue -------------------------------------------------------
+  CrmOpenPipelineByStage:
+    name: Open pipeline by stage
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Deal
+          filter: "stage != 'Won' AND stage != 'Lost'"
+          dimensions:
+            - field: stage
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: amount
+              aggregate: SUM
+              label: Pipeline amount
+              type: bar
+              backgroundColor: "#4e79a7"
+              fixTooltips: true
+            - field: forecast_amount
+              aggregate: SUM
+              label: Weighted amount
+              type: bar
+              backgroundColor: "#59a14f"
+              fixTooltips: true
+
+  CrmDealFunnel:
+    name: Deal funnel
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Deal
+          filter: "stage != 'Lost'"
+          dimensions:
+            - field: stage
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: count
+              label: Deals
+              type: funnel
+
+  CrmForecastByCloseMonth:
+    name: Forecast by expected close month
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Deal
+          filter: "stage != 'Won' AND stage != 'Lost'"
+          dimensions:
+            - field: close_date
+              modifier: MONTH
+              timeLabels: true
+          metrics:
+            - field: amount
+              aggregate: SUM
+              label: Pipeline amount
+              type: bar
+              backgroundColor: "#4e79a7"
+            - field: forecast_amount
+              aggregate: SUM
+              label: Weighted amount
+              type: line
+              backgroundColor: "#f28e2b"
+
+  CrmWonRevenueByMonth:
+    name: Won revenue by month
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Deal
+          filter: "stage = 'Won'"
+          dimensions:
+            - field: closed_at
+              modifier: MONTH
+              timeLabels: true
+          metrics:
+            - field: amount
+              aggregate: SUM
+              label: Won revenue
+              type: bar
+              backgroundColor: "#59a14f"
+              fixTooltips: true
+
+  CrmWonVsLost:
+    name: Won vs lost deals
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Deal
+          filter: "stage = 'Won' OR stage = 'Lost'"
+          dimensions:
+            - field: stage
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: count
+              label: Deals
+              type: doughnut
+
+  # --- Lead conversion --------------------------------------------------------
+  CrmContactsByLifecycle:
+    name: Contacts by lifecycle stage
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Contact
+          filter: ""
+          dimensions:
+            - field: lifecycle_stage
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: count
+              label: Contacts
+              type: funnel
+
+  CrmLeadsBySource:
+    name: Contacts by lead source
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Contact
+          filter: ""
+          dimensions:
+            - field: lead_source
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: count
+              label: Contacts
+              type: bar
+              backgroundColor: "#76b7b2"
+              fixTooltips: true
+
+  CrmNewContactsByMonth:
+    name: New contacts by month
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Contact
+          filter: ""
+          dimensions:
+            - field: createdAt
+              modifier: MONTH
+              timeLabels: true
+          metrics:
+            - field: count
+              label: New contacts
+              type: line
+              backgroundColor: "#4e79a7"
+
+  CrmCustomersBySource:
+    name: Customers by lead source
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: Contact
+          filter: "lifecycle_stage = 'Customer'"
+          dimensions:
+            - field: lead_source
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: count
+              label: Customers
+              type: pie
+
+  # --- Email engagement -------------------------------------------------------
+  CrmRecipientStatus:
+    name: Email recipients by status
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: CampaignRecipient
+          filter: ""
+          dimensions:
+            - field: status
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: count
+              label: Recipients
+              type: doughnut
+
+  CrmEmailsSentByMonth:
+    name: Emails sent by month
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: CampaignRecipient
+          filter: "status != 'Queued' AND status != 'Skipped' AND status != 'Failed'"
+          dimensions:
+            - field: sent_at
+              modifier: MONTH
+              timeLabels: true
+          metrics:
+            - field: count
+              label: Sent
+              type: bar
+              backgroundColor: "#4e79a7"
+
+  CrmCampaignEngagement:
+    name: Engagement by campaign
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: EmailCampaign
+          filter: "status = 'Sent'"
+          dimensions:
+            - field: name
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: sent_count
+              aggregate: SUM
+              label: Sent
+              type: bar
+              backgroundColor: "#4e79a7"
+            - field: opened_count
+              aggregate: SUM
+              label: Opened
+              type: bar
+              backgroundColor: "#59a14f"
+            - field: clicked_count
+              aggregate: SUM
+              label: Clicked
+              type: bar
+              backgroundColor: "#f28e2b"
+            - field: unsubscribed_count
+              aggregate: SUM
+              label: Unsubscribed
+              type: bar
+              backgroundColor: "#e15759"
+
+  # --- Automation performance -------------------------------------------------
+  CrmAutomationRunsByWorkflow:
+    name: Automation runs by workflow
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: AutomationRun
+          filter: ""
+          dimensions:
+            - field: workflow_name
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: count
+              label: Runs
+              type: bar
+              backgroundColor: "#4e79a7"
+              fixTooltips: true
+
+  CrmAutomationRunsByDay:
+    name: Automation runs per day
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: AutomationRun
+          filter: ""
+          dimensions:
+            - field: createdAt
+              modifier: DATE
+              timeLabels: true
+          metrics:
+            - field: count
+              label: Runs
+              type: line
+              backgroundColor: "#76b7b2"
+
+  CrmAutomationResults:
+    name: Automation results
+    config:
+      colorscheme: tableau.Tableau10
+      reports:
+        - module: AutomationRun
+          filter: ""
+          dimensions:
+            - field: status
+              modifier: (no grouping / buckets)
+          metrics:
+            - field: count
+              label: Runs
+              type: pie

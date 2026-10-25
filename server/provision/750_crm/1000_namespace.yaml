@@ -1,0 +1,10 @@
+namespaces:
+  crm:
+    name: CRM
+    enabled: true
+    meta:
+      subtitle: Contacts, companies, deals and email marketing
+      description: |-
+        HubSpot-style CRM foundation: contact and company database, deal pipeline,
+        activity timeline, email campaigns and reporting dashboards.
+        Automation runs on Corteza workflows (see 1600_workflows.yaml).

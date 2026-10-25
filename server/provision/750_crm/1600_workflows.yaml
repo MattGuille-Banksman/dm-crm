@@ -1,0 +1,1579 @@
+# CRM automation flows
+#
+# These are native Corteza workflows (the node-based automation engine):
+#   AutomationFlow -> workflow, AutomationNode -> step, AutomationEdge -> path,
+#   AutomationRun  -> workflow session (+ a business-level row in the
+#                     AutomationRun module, written by the flows below).
+#
+# Every step, trigger and path carries meta.visual so the flows open as
+# flowcharts in the Workflow editor (Workflows app) where they can be edited.
+#
+# Conventions
+# - Results of record functions are never written into the "record" variable,
+#   because in before* triggers whatever "record" holds at the end is what
+#   gets saved.
+# - Number/ID interpolation uses format() (fmt.Sprintf); "+" on two strings
+#   concatenates.
+
+workflows:
+
+  # ===========================================================================
+  # Deal: derive probability, weighted amount and closed flags from the stage
+  crm_deal_stage_rules:
+    meta:
+      name: "CRM: Deal stage rules"
+      description: Sets probability, weighted amount, closed/won flags and close timestamp from the deal stage.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: beforeCreate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 0, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+      - resourceType: compose:record
+        eventType: beforeUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t2"
+            parent: "1"
+            xywh: [0, 160, 0, 0]
+            edges:
+              - { parentID: "t2", childID: "10", meta: { visual: { id: "et2", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: expressions
+        arguments:
+          - { target: p, type: Integer, expr: 'record.values.stage == "Won" ? 100 : (record.values.stage == "Negotiation" ? 60 : (record.values.stage == "Proposal" ? 40 : (record.values.stage == "Qualified" ? 20 : (record.values.stage == "Lost" ? 0 : 10))))' }
+          - { target: record.values.probability, type: Any, expr: "p" }
+          - { target: record.values.forecast_amount, type: Any, expr: "float(coalesce(record.values.amount, 0)) * float(p) / 100" }
+          - { target: record.values.is_closed, type: Any, expr: 'record.values.stage == "Won" || record.values.stage == "Lost"' }
+          - { target: record.values.is_won, type: Any, expr: 'record.values.stage == "Won"' }
+        meta:
+          name: Probability and weighted amount
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+      - id: 20
+        kind: gateway
+        ref: excl
+        meta:
+          name: Just closed?
+          visual: { id: "20", parent: "1", value: null, xywh: [500, 80, 0, 0] }
+      - id: 30
+        kind: expressions
+        arguments:
+          - { target: record.values.closed_at, type: Any, expr: "now()" }
+        meta:
+          name: Stamp closed at
+          visual: { id: "30", parent: "1", value: null, xywh: [750, 0, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [1000, 80, 0, 0] }
+    paths:
+      - { parentid: 10, childid: 20, meta: { visual: { id: "p10_20", parent: "1", value: null, points: [] } } }
+      - parentid: 20
+        childid: 30
+        expr: '(record.values.stage == "Won" || record.values.stage == "Lost") && isEmpty(record.values.closed_at)'
+        meta: { name: Closed now, visual: { id: "p20_30", parent: "1", value: null, points: [] } }
+      - parentid: 20
+        childid: 99
+        expr: ""
+        meta: { name: Otherwise, visual: { id: "p20_99", parent: "1", value: null, points: [] } }
+      - { parentid: 30, childid: 99, meta: { visual: { id: "p30_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Contact: display name, default lifecycle stage, unsubscribe timestamp
+  crm_contact_defaults:
+    meta:
+      name: "CRM: Contact defaults"
+      description: Builds the contact display name, defaults lifecycle stage to Lead and stamps the unsubscribe time.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: beforeCreate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 0, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+      - resourceType: compose:record
+        eventType: beforeUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t2"
+            parent: "1"
+            xywh: [0, 160, 0, 0]
+            edges:
+              - { parentID: "t2", childID: "10", meta: { visual: { id: "et2", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: expressions
+        arguments:
+          - { target: fullName, type: String, expr: 'trim(coalesce(record.values.first_name, "") + " " + coalesce(record.values.last_name, ""))' }
+          - { target: record.values.full_name, type: Any, expr: 'fullName == "" ? coalesce(record.values.email, "") : fullName' }
+          - { target: record.values.lifecycle_stage, type: Any, expr: 'coalesce(record.values.lifecycle_stage, "Lead")' }
+        meta:
+          name: Name and lifecycle defaults
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+      - id: 20
+        kind: gateway
+        ref: excl
+        meta:
+          name: Just unsubscribed?
+          visual: { id: "20", parent: "1", value: null, xywh: [500, 80, 0, 0] }
+      - id: 30
+        kind: expressions
+        arguments:
+          - { target: record.values.unsubscribed_at, type: Any, expr: "now()" }
+        meta:
+          name: Stamp unsubscribed at
+          visual: { id: "30", parent: "1", value: null, xywh: [750, 0, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [1000, 80, 0, 0] }
+    paths:
+      - { parentid: 10, childid: 20, meta: { visual: { id: "p10_20", parent: "1", value: null, points: [] } } }
+      - parentid: 20
+        childid: 30
+        expr: "record.values.email_opt_out == true && isEmpty(record.values.unsubscribed_at)"
+        meta: { name: Opted out, visual: { id: "p20_30", parent: "1", value: null, points: [] } }
+      - parentid: 20
+        childid: 99
+        expr: ""
+        meta: { name: Otherwise, visual: { id: "p20_99", parent: "1", value: null, points: [] } }
+      - { parentid: 30, childid: 99, meta: { visual: { id: "p30_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Deal won: promote the primary contact and company to Customer
+  crm_deal_won:
+    meta:
+      name: "CRM: Deal won -> customer"
+      description: When a deal moves to Won, sets the linked contact and company lifecycle stage to Customer.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: afterUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Just won?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 20
+        kind: gateway
+        ref: excl
+        meta:
+          name: Has contact?
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 30
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: record, type: ID, expr: "record.values.contact" }
+        results:
+          - { target: contact, expr: "record" }
+        meta:
+          name: Load contact
+          visual: { id: "30", parent: "1", value: null, xywh: [600, 0, 0, 0] }
+      - id: 31
+        kind: expressions
+        arguments:
+          - { target: contact.values.lifecycle_stage, type: Any, value: Customer }
+        meta:
+          name: Contact is a customer
+          visual: { id: "31", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 32
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "contact" }
+        meta:
+          name: Save contact
+          visual: { id: "32", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 50
+        kind: gateway
+        ref: excl
+        meta:
+          name: Has company?
+          visual: { id: "50", parent: "1", value: null, xywh: [1200, 80, 0, 0] }
+      - id: 60
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Company }
+          - { target: record, type: ID, expr: "record.values.company" }
+        results:
+          - { target: company, expr: "record" }
+        meta:
+          name: Load company
+          visual: { id: "60", parent: "1", value: null, xywh: [1400, 0, 0, 0] }
+      - id: 61
+        kind: expressions
+        arguments:
+          - { target: company.values.lifecycle_stage, type: Any, value: Customer }
+        meta:
+          name: Company is a customer
+          visual: { id: "61", parent: "1", value: null, xywh: [1600, 0, 0, 0] }
+      - id: 62
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "company" }
+        meta:
+          name: Save company
+          visual: { id: "62", parent: "1", value: null, xywh: [1800, 0, 0, 0] }
+      - id: 70
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: AutomationRun }
+        results:
+          - { target: run, expr: "record" }
+        meta:
+          name: New run log
+          visual: { id: "70", parent: "1", value: null, xywh: [2000, 80, 0, 0] }
+      - id: 71
+        kind: expressions
+        arguments:
+          - { target: run.values.workflow, type: Any, value: crm_deal_won }
+          - { target: run.values.workflow_name, type: Any, value: "Deal won -> customer" }
+          - { target: run.values.trigger, type: Any, value: Deal updated }
+          - { target: run.values.status, type: Any, value: Completed }
+          - { target: run.values.resource_module, type: Any, value: Deal }
+          - { target: run.values.resource_record_id, type: Any, expr: 'format("%v", record.ID)' }
+          - { target: run.values.deal, type: Any, expr: "record.ID" }
+          - { target: run.values.message, type: Any, expr: '"Deal won: " + coalesce(record.values.name, "")' }
+        meta:
+          name: Describe run
+          visual: { id: "71", parent: "1", value: null, xywh: [2200, 80, 0, 0] }
+      - id: 72
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "run" }
+        meta:
+          name: Save run log
+          visual: { id: "72", parent: "1", value: null, xywh: [2400, 80, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [2600, 80, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: 'record.values.stage == "Won" && oldRecord.values.stage != "Won"'
+        meta: { name: Won now, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 99
+        expr: ""
+        meta: { name: Otherwise, visual: { id: "p10_99", parent: "1", value: null, points: [] } }
+      - parentid: 20
+        childid: 30
+        expr: "!isEmpty(record.values.contact)"
+        meta: { name: Yes, visual: { id: "p20_30", parent: "1", value: null, points: [] } }
+      - parentid: 20
+        childid: 50
+        expr: ""
+        meta: { name: No, visual: { id: "p20_50", parent: "1", value: null, points: [] } }
+      - { parentid: 30, childid: 31, meta: { visual: { id: "p30_31", parent: "1", value: null, points: [] } } }
+      - { parentid: 31, childid: 32, meta: { visual: { id: "p31_32", parent: "1", value: null, points: [] } } }
+      - { parentid: 32, childid: 50, meta: { visual: { id: "p32_50", parent: "1", value: null, points: [] } } }
+      - parentid: 50
+        childid: 60
+        expr: "!isEmpty(record.values.company)"
+        meta: { name: Yes, visual: { id: "p50_60", parent: "1", value: null, points: [] } }
+      - parentid: 50
+        childid: 70
+        expr: ""
+        meta: { name: No, visual: { id: "p50_70", parent: "1", value: null, points: [] } }
+      - { parentid: 60, childid: 61, meta: { visual: { id: "p60_61", parent: "1", value: null, points: [] } } }
+      - { parentid: 61, childid: 62, meta: { visual: { id: "p61_62", parent: "1", value: null, points: [] } } }
+      - { parentid: 62, childid: 70, meta: { visual: { id: "p62_70", parent: "1", value: null, points: [] } } }
+      - { parentid: 70, childid: 71, meta: { visual: { id: "p70_71", parent: "1", value: null, points: [] } } }
+      - { parentid: 71, childid: 72, meta: { visual: { id: "p71_72", parent: "1", value: null, points: [] } } }
+      - { parentid: 72, childid: 99, meta: { visual: { id: "p72_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # New lead: create a follow-up task, wait 3 days, escalate if still open
+  crm_lead_followup:
+    meta:
+      name: "CRM: New lead follow-up"
+      description: Creates a follow-up task for new leads, waits 3 days and creates a second task if the first one is still open.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: afterCreate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Is a lead?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 20
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Activity }
+        results:
+          - { target: task, expr: "record" }
+        meta:
+          name: New task
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 21
+        kind: expressions
+        arguments:
+          - { target: task.values.subject, type: Any, expr: '"Follow up with " + coalesce(record.values.full_name, "new lead")' }
+          - { target: task.values.activity_type, type: Any, value: Task }
+          - { target: task.values.status, type: Any, value: Planned }
+          - { target: task.values.direction, type: Any, value: Outbound }
+          - { target: task.values.due_at, type: Any, expr: "modDate(now(), 1)" }
+          - { target: task.values.contact, type: Any, expr: "record.ID" }
+          - { target: task.values.owner, type: Any, expr: "coalesce(record.values.owner, record.ownedBy)" }
+          - { target: task.values.body, type: Any, value: Created automatically by the new-lead follow-up workflow. }
+        meta:
+          name: Fill in task
+          visual: { id: "21", parent: "1", value: null, xywh: [600, 80, 0, 0] }
+      - id: 22
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "task" }
+        results:
+          - { target: task, expr: "record" }
+        meta:
+          name: Save task
+          visual: { id: "22", parent: "1", value: null, xywh: [800, 80, 0, 0] }
+      - id: 30
+        kind: delay
+        arguments:
+          - { target: offset, type: Duration, value: "72h" }
+        meta:
+          name: Wait 3 days
+          visual: { id: "30", parent: "1", value: null, xywh: [1000, 80, 0, 0] }
+      - id: 40
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Activity }
+          - { target: record, type: ID, expr: "task.ID" }
+        results:
+          - { target: task, expr: "record" }
+        meta:
+          name: Reload task
+          visual: { id: "40", parent: "1", value: null, xywh: [1200, 80, 0, 0] }
+      - id: 50
+        kind: gateway
+        ref: excl
+        meta:
+          name: Still open?
+          visual: { id: "50", parent: "1", value: null, xywh: [1400, 80, 0, 0] }
+      - id: 60
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Activity }
+        results:
+          - { target: reminder, expr: "record" }
+        meta:
+          name: New second task
+          visual: { id: "60", parent: "1", value: null, xywh: [1600, 0, 0, 0] }
+      - id: 61
+        kind: expressions
+        arguments:
+          - { target: reminder.values.subject, type: Any, expr: '"Second follow-up: " + coalesce(record.values.full_name, "lead")' }
+          - { target: reminder.values.activity_type, type: Any, value: Task }
+          - { target: reminder.values.status, type: Any, value: Planned }
+          - { target: reminder.values.direction, type: Any, value: Outbound }
+          - { target: reminder.values.due_at, type: Any, expr: "modDate(now(), 1)" }
+          - { target: reminder.values.contact, type: Any, expr: "record.ID" }
+          - { target: reminder.values.owner, type: Any, expr: "coalesce(task.values.owner, record.ownedBy)" }
+        meta:
+          name: Fill in second task
+          visual: { id: "61", parent: "1", value: null, xywh: [1800, 0, 0, 0] }
+      - id: 62
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "reminder" }
+        meta:
+          name: Save second task
+          visual: { id: "62", parent: "1", value: null, xywh: [2000, 0, 0, 0] }
+      - id: 63
+        kind: expressions
+        arguments:
+          - { target: runMessage, type: String, value: First follow-up still open after 3 days; second task created. }
+        meta:
+          name: Escalated
+          visual: { id: "63", parent: "1", value: null, xywh: [2200, 0, 0, 0] }
+      - id: 65
+        kind: expressions
+        arguments:
+          - { target: runMessage, type: String, value: First follow-up completed within 3 days. }
+        meta:
+          name: Followed up in time
+          visual: { id: "65", parent: "1", value: null, xywh: [1800, 200, 0, 0] }
+      - id: 70
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: AutomationRun }
+        results:
+          - { target: run, expr: "record" }
+        meta:
+          name: New run log
+          visual: { id: "70", parent: "1", value: null, xywh: [2400, 80, 0, 0] }
+      - id: 71
+        kind: expressions
+        arguments:
+          - { target: run.values.workflow, type: Any, value: crm_lead_followup }
+          - { target: run.values.workflow_name, type: Any, value: New lead follow-up }
+          - { target: run.values.trigger, type: Any, value: Contact created }
+          - { target: run.values.status, type: Any, value: Completed }
+          - { target: run.values.resource_module, type: Any, value: Contact }
+          - { target: run.values.resource_record_id, type: Any, expr: 'format("%v", record.ID)' }
+          - { target: run.values.contact, type: Any, expr: "record.ID" }
+          - { target: run.values.message, type: Any, expr: "runMessage" }
+        meta:
+          name: Describe run
+          visual: { id: "71", parent: "1", value: null, xywh: [2600, 80, 0, 0] }
+      - id: 72
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "run" }
+        meta:
+          name: Save run log
+          visual: { id: "72", parent: "1", value: null, xywh: [2800, 80, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [3000, 80, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: 'record.values.lifecycle_stage == "Lead" || record.values.lifecycle_stage == "MQL" || record.values.lifecycle_stage == "SQL"'
+        meta: { name: Lead, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 99
+        expr: ""
+        meta: { name: Not a lead, visual: { id: "p10_99", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 21, meta: { visual: { id: "p20_21", parent: "1", value: null, points: [] } } }
+      - { parentid: 21, childid: 22, meta: { visual: { id: "p21_22", parent: "1", value: null, points: [] } } }
+      - { parentid: 22, childid: 30, meta: { visual: { id: "p22_30", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 40, meta: { visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 50, meta: { visual: { id: "p40_50", parent: "1", value: null, points: [] } } }
+      - parentid: 50
+        childid: 60
+        expr: 'task.values.status == "Planned"'
+        meta: { name: Not done, visual: { id: "p50_60", parent: "1", value: null, points: [] } }
+      - parentid: 50
+        childid: 65
+        expr: ""
+        meta: { name: Done, visual: { id: "p50_65", parent: "1", value: null, points: [] } }
+      - { parentid: 60, childid: 61, meta: { visual: { id: "p60_61", parent: "1", value: null, points: [] } } }
+      - { parentid: 61, childid: 62, meta: { visual: { id: "p61_62", parent: "1", value: null, points: [] } } }
+      - { parentid: 62, childid: 63, meta: { visual: { id: "p62_63", parent: "1", value: null, points: [] } } }
+      - { parentid: 63, childid: 70, meta: { visual: { id: "p63_70", parent: "1", value: null, points: [] } } }
+      - { parentid: 65, childid: 70, meta: { visual: { id: "p65_70", parent: "1", value: null, points: [] } } }
+      - { parentid: 70, childid: 71, meta: { visual: { id: "p70_71", parent: "1", value: null, points: [] } } }
+      - { parentid: 71, childid: 72, meta: { visual: { id: "p71_72", parent: "1", value: null, points: [] } } }
+      - { parentid: 72, childid: 99, meta: { visual: { id: "p72_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Activity logged: bump "last activity" on the contact and company
+  crm_activity_touch:
+    meta:
+      name: "CRM: Activity updates last activity"
+      description: When an activity is logged, updates last activity on the linked contact and company.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: afterCreate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Activity] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Has contact?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 20
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: record, type: ID, expr: "record.values.contact" }
+        results:
+          - { target: contact, expr: "record" }
+        meta:
+          name: Load contact
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 0, 0, 0] }
+      - id: 21
+        kind: expressions
+        arguments:
+          - { target: contact.values.last_activity_at, type: Any, expr: "coalesce(record.values.occurred_at, now())" }
+        meta:
+          name: Set last activity
+          visual: { id: "21", parent: "1", value: null, xywh: [600, 0, 0, 0] }
+      - id: 22
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "contact" }
+        meta:
+          name: Save contact
+          visual: { id: "22", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 30
+        kind: gateway
+        ref: excl
+        meta:
+          name: Has company?
+          visual: { id: "30", parent: "1", value: null, xywh: [1000, 80, 0, 0] }
+      - id: 40
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Company }
+          - { target: record, type: ID, expr: "record.values.company" }
+        results:
+          - { target: company, expr: "record" }
+        meta:
+          name: Load company
+          visual: { id: "40", parent: "1", value: null, xywh: [1200, 0, 0, 0] }
+      - id: 41
+        kind: expressions
+        arguments:
+          - { target: company.values.last_activity_at, type: Any, expr: "coalesce(record.values.occurred_at, now())" }
+        meta:
+          name: Set last activity
+          visual: { id: "41", parent: "1", value: null, xywh: [1400, 0, 0, 0] }
+      - id: 42
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "company" }
+        meta:
+          name: Save company
+          visual: { id: "42", parent: "1", value: null, xywh: [1600, 0, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [1800, 80, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: "!isEmpty(record.values.contact)"
+        meta: { name: Yes, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 30
+        expr: ""
+        meta: { name: No, visual: { id: "p10_30", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 21, meta: { visual: { id: "p20_21", parent: "1", value: null, points: [] } } }
+      - { parentid: 21, childid: 22, meta: { visual: { id: "p21_22", parent: "1", value: null, points: [] } } }
+      - { parentid: 22, childid: 30, meta: { visual: { id: "p22_30", parent: "1", value: null, points: [] } } }
+      - parentid: 30
+        childid: 40
+        expr: "!isEmpty(record.values.company)"
+        meta: { name: Yes, visual: { id: "p30_40", parent: "1", value: null, points: [] } }
+      - parentid: 30
+        childid: 99
+        expr: ""
+        meta: { name: No, visual: { id: "p30_99", parent: "1", value: null, points: [] } }
+      - { parentid: 40, childid: 41, meta: { visual: { id: "p40_41", parent: "1", value: null, points: [] } } }
+      - { parentid: 41, childid: 42, meta: { visual: { id: "p41_42", parent: "1", value: null, points: [] } } }
+      - { parentid: 42, childid: 99, meta: { visual: { id: "p42_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Campaign: build the recipient list from the audience filter
+  crm_campaign_build_recipients:
+    meta:
+      name: "CRM: Campaign - build recipients"
+      description: Queues one CampaignRecipient per contact matching the campaign audience filter, skipping opted-out contacts and contacts without email.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [EmailCampaign] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Can build?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 15
+        kind: error
+        arguments:
+          - { target: message, type: String, value: "Recipients can be built only once, for Draft or Scheduled campaigns." }
+        meta:
+          name: Not allowed
+          visual: { id: "15", parent: "1", value: null, xywh: [200, 280, 0, 0] }
+      - id: 20
+        kind: expressions
+        arguments:
+          - { target: count, type: Integer, value: "0" }
+          - { target: audience, type: String, expr: 'coalesce(record.values.audience_query, "")' }
+        meta:
+          name: Init
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 30
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: query, type: String, expr: "audience" }
+        results:
+          - { target: contact, expr: "record" }
+        meta:
+          name: Each matching contact
+          visual: { id: "30", parent: "1", value: null, xywh: [600, 80, 0, 0] }
+      - id: 40
+        kind: gateway
+        ref: excl
+        meta:
+          name: Mailable?
+          visual: { id: "40", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 45
+        kind: continue
+        meta:
+          name: Skip
+          visual: { id: "45", parent: "1", value: null, xywh: [800, -160, 0, 0] }
+      - id: 50
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: CampaignRecipient }
+        results:
+          - { target: rcp, expr: "record" }
+        meta:
+          name: New recipient
+          visual: { id: "50", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 51
+        kind: expressions
+        arguments:
+          - { target: rcp.values.campaign, type: Any, expr: "record.ID" }
+          - { target: rcp.values.contact, type: Any, expr: "contact.ID" }
+          - { target: rcp.values.email, type: Any, expr: "contact.values.email" }
+          - { target: rcp.values.status, type: Any, value: Queued }
+          - { target: rcp.values.queued_at, type: Any, expr: "now()" }
+          - { target: count, type: Integer, expr: "count + 1" }
+        meta:
+          name: Fill in recipient
+          visual: { id: "51", parent: "1", value: null, xywh: [1200, 0, 0, 0] }
+      - id: 52
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "rcp" }
+        meta:
+          name: Save recipient
+          visual: { id: "52", parent: "1", value: null, xywh: [1400, 0, 0, 0] }
+      - id: 53
+        kind: continue
+        meta:
+          name: Next contact
+          visual: { id: "53", parent: "1", value: null, xywh: [1600, 0, 0, 0] }
+      - id: 60
+        kind: expressions
+        arguments:
+          - { target: record.values.recipients_count, type: Any, expr: "count" }
+          - { target: record.values.status, type: Any, value: Scheduled }
+        meta:
+          name: Update campaign
+          visual: { id: "60", parent: "1", value: null, xywh: [800, 200, 0, 0] }
+      - id: 61
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "record" }
+        meta:
+          name: Save campaign
+          visual: { id: "61", parent: "1", value: null, xywh: [1000, 200, 0, 0] }
+      - id: 70
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: AutomationRun }
+        results:
+          - { target: run, expr: "record" }
+        meta:
+          name: New run log
+          visual: { id: "70", parent: "1", value: null, xywh: [1200, 200, 0, 0] }
+      - id: 71
+        kind: expressions
+        arguments:
+          - { target: run.values.workflow, type: Any, value: crm_campaign_build_recipients }
+          - { target: run.values.workflow_name, type: Any, value: Campaign - build recipients }
+          - { target: run.values.trigger, type: Any, value: Manual }
+          - { target: run.values.status, type: Any, value: Completed }
+          - { target: run.values.resource_module, type: Any, value: EmailCampaign }
+          - { target: run.values.resource_record_id, type: Any, expr: 'format("%v", record.ID)' }
+          - { target: run.values.campaign, type: Any, expr: "record.ID" }
+          - { target: run.values.message, type: Any, expr: 'format("Queued %v recipients", count)' }
+        meta:
+          name: Describe run
+          visual: { id: "71", parent: "1", value: null, xywh: [1400, 200, 0, 0] }
+      - id: 72
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "run" }
+        meta:
+          name: Save run log
+          visual: { id: "72", parent: "1", value: null, xywh: [1600, 200, 0, 0] }
+      - id: 80
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Recipients ready }
+          - { target: message, type: String, expr: 'format("Queued %v recipients. Review the list, then click Send campaign.", count)' }
+          - { target: variant, type: String, value: success }
+        meta:
+          name: Tell the user
+          visual: { id: "80", parent: "1", value: null, xywh: [1800, 200, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: '(record.values.status == "Draft" || record.values.status == "Scheduled") && coalesce(record.values.recipients_count, 0) == 0'
+        meta: { name: Yes, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 15
+        expr: ""
+        meta: { name: No, visual: { id: "p10_15", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 30, meta: { visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 30, childid: 40, meta: { name: Loop, visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 60, meta: { name: Done, visual: { id: "p30_60", parent: "1", value: null, points: [] } } }
+      - parentid: 40
+        childid: 50
+        expr: "contact.values.email_opt_out != true && !isEmpty(contact.values.email)"
+        meta: { name: Yes, visual: { id: "p40_50", parent: "1", value: null, points: [] } }
+      - parentid: 40
+        childid: 45
+        expr: ""
+        meta: { name: No, visual: { id: "p40_45", parent: "1", value: null, points: [] } }
+      - { parentid: 50, childid: 51, meta: { visual: { id: "p50_51", parent: "1", value: null, points: [] } } }
+      - { parentid: 51, childid: 52, meta: { visual: { id: "p51_52", parent: "1", value: null, points: [] } } }
+      - { parentid: 52, childid: 53, meta: { visual: { id: "p52_53", parent: "1", value: null, points: [] } } }
+      - { parentid: 60, childid: 61, meta: { visual: { id: "p60_61", parent: "1", value: null, points: [] } } }
+      - { parentid: 61, childid: 70, meta: { visual: { id: "p61_70", parent: "1", value: null, points: [] } } }
+      - { parentid: 70, childid: 71, meta: { visual: { id: "p70_71", parent: "1", value: null, points: [] } } }
+      - { parentid: 71, childid: 72, meta: { visual: { id: "p71_72", parent: "1", value: null, points: [] } } }
+      - { parentid: 72, childid: 80, meta: { visual: { id: "p72_80", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Campaign: send to every queued recipient
+  #
+  # Sender address is Corteza's configured SMTP sender (SMTP_FROM). Merge tags
+  # {{first_name}} {{last_name}} {{full_name}} {{email}} are replaced in the
+  # subject, HTML and plain-text bodies.
+  crm_campaign_send:
+    meta:
+      name: "CRM: Campaign - send"
+      description: Sends the campaign template to every Queued recipient, skipping opted-out contacts, and marks recipients and the campaign as Sent.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [EmailCampaign] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Ready to send?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 15
+        kind: error
+        arguments:
+          - { target: message, type: String, value: "Campaign must be Scheduled (build the recipient list first) and have a template." }
+        meta:
+          name: Not ready
+          visual: { id: "15", parent: "1", value: null, xywh: [200, 280, 0, 0] }
+      - id: 20
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: EmailTemplate }
+          - { target: record, type: ID, expr: "record.values.template" }
+        results:
+          - { target: tpl, expr: "record" }
+        meta:
+          name: Load template
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 25
+        kind: expressions
+        arguments:
+          - { target: subjectTpl, type: String, expr: 'coalesce(record.values.subject, tpl.values.subject, "")' }
+          - { target: htmlTpl, type: String, expr: 'coalesce(tpl.values.body_html, "")' }
+          - { target: textTpl, type: String, expr: 'coalesce(tpl.values.body_text, "")' }
+          - { target: sent, type: Integer, value: "0" }
+          - { target: skipped, type: Integer, value: "0" }
+          - { target: record.values.status, type: Any, value: Sending }
+        meta:
+          name: Prepare
+          visual: { id: "25", parent: "1", value: null, xywh: [600, 80, 0, 0] }
+      - id: 26
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "record" }
+        meta:
+          name: Mark campaign Sending
+          visual: { id: "26", parent: "1", value: null, xywh: [800, 80, 0, 0] }
+      - id: 30
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: CampaignRecipient }
+          - { target: query, type: String, expr: 'format("campaign = %v AND status = ''Queued''", record.ID)' }
+        results:
+          - { target: rcp, expr: "record" }
+        meta:
+          name: Each queued recipient
+          visual: { id: "30", parent: "1", value: null, xywh: [1000, 80, 0, 0] }
+      - id: 40
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: record, type: ID, expr: "rcp.values.contact" }
+        results:
+          - { target: c, expr: "record" }
+        meta:
+          name: Load contact
+          visual: { id: "40", parent: "1", value: null, xywh: [1200, 0, 0, 0] }
+      - id: 45
+        kind: gateway
+        ref: excl
+        meta:
+          name: Still mailable?
+          visual: { id: "45", parent: "1", value: null, xywh: [1400, 0, 0, 0] }
+      - id: 46
+        kind: expressions
+        arguments:
+          - { target: rcp.values.status, type: Any, value: Skipped }
+          - { target: rcp.values.error, type: Any, value: Contact unsubscribed or has no email address }
+          - { target: skipped, type: Integer, expr: "skipped + 1" }
+        meta:
+          name: Mark skipped
+          visual: { id: "46", parent: "1", value: null, xywh: [1400, -200, 0, 0] }
+      - id: 47
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "rcp" }
+        meta:
+          name: Save recipient
+          visual: { id: "47", parent: "1", value: null, xywh: [1600, -200, 0, 0] }
+      - id: 48
+        kind: continue
+        meta:
+          name: Next recipient
+          visual: { id: "48", parent: "1", value: null, xywh: [1800, -200, 0, 0] }
+      - id: 50
+        kind: expressions
+        arguments:
+          - { target: name, type: String, expr: 'coalesce(c.values.full_name, c.values.email, "")' }
+          - { target: s1, type: String, expr: 'replace(subjectTpl, "{{first_name}}", coalesce(c.values.first_name, ""), -1)' }
+          - { target: s2, type: String, expr: 'replace(s1, "{{last_name}}", coalesce(c.values.last_name, ""), -1)' }
+          - { target: s3, type: String, expr: 'replace(s2, "{{full_name}}", name, -1)' }
+          - { target: subject, type: String, expr: 'replace(s3, "{{email}}", c.values.email, -1)' }
+          - { target: h1, type: String, expr: 'replace(htmlTpl, "{{first_name}}", coalesce(c.values.first_name, ""), -1)' }
+          - { target: h2, type: String, expr: 'replace(h1, "{{last_name}}", coalesce(c.values.last_name, ""), -1)' }
+          - { target: h3, type: String, expr: 'replace(h2, "{{full_name}}", name, -1)' }
+          - { target: html, type: String, expr: 'replace(h3, "{{email}}", c.values.email, -1)' }
+          - { target: p1, type: String, expr: 'replace(textTpl, "{{first_name}}", coalesce(c.values.first_name, ""), -1)' }
+          - { target: p2, type: String, expr: 'replace(p1, "{{last_name}}", coalesce(c.values.last_name, ""), -1)' }
+          - { target: p3, type: String, expr: 'replace(p2, "{{full_name}}", name, -1)' }
+          - { target: plain, type: String, expr: 'replace(p3, "{{email}}", c.values.email, -1)' }
+        meta:
+          name: Render merge tags
+          visual: { id: "50", parent: "1", value: null, xywh: [1600, 0, 0, 0] }
+      - id: 55
+        kind: function
+        ref: emailSend
+        arguments:
+          - { target: subject, type: String, expr: "subject" }
+          - { target: to, type: String, expr: "c.values.email" }
+          - { target: html, type: String, expr: "html" }
+          - { target: plain, type: String, expr: "plain" }
+        meta:
+          name: Send email
+          visual: { id: "55", parent: "1", value: null, xywh: [1800, 0, 0, 0] }
+      - id: 60
+        kind: expressions
+        arguments:
+          - { target: rcp.values.status, type: Any, value: Sent }
+          - { target: rcp.values.sent_at, type: Any, expr: "now()" }
+          - { target: rcp.values.email, type: Any, expr: "c.values.email" }
+          - { target: sent, type: Integer, expr: "sent + 1" }
+        meta:
+          name: Mark sent
+          visual: { id: "60", parent: "1", value: null, xywh: [2000, 0, 0, 0] }
+      - id: 65
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "rcp" }
+        meta:
+          name: Save recipient
+          visual: { id: "65", parent: "1", value: null, xywh: [2200, 0, 0, 0] }
+      - id: 66
+        kind: continue
+        meta:
+          name: Next recipient
+          visual: { id: "66", parent: "1", value: null, xywh: [2400, 0, 0, 0] }
+      - id: 80
+        kind: expressions
+        arguments:
+          - { target: record.values.status, type: Any, value: Sent }
+          - { target: record.values.sent_at, type: Any, expr: "now()" }
+          - { target: record.values.sent_count, type: Any, expr: "sent" }
+        meta:
+          name: Update campaign
+          visual: { id: "80", parent: "1", value: null, xywh: [1000, 280, 0, 0] }
+      - id: 85
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "record" }
+        meta:
+          name: Save campaign
+          visual: { id: "85", parent: "1", value: null, xywh: [1200, 280, 0, 0] }
+      - id: 86
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: AutomationRun }
+        results:
+          - { target: run, expr: "record" }
+        meta:
+          name: New run log
+          visual: { id: "86", parent: "1", value: null, xywh: [1400, 280, 0, 0] }
+      - id: 87
+        kind: expressions
+        arguments:
+          - { target: run.values.workflow, type: Any, value: crm_campaign_send }
+          - { target: run.values.workflow_name, type: Any, value: Campaign - send }
+          - { target: run.values.trigger, type: Any, value: Manual }
+          - { target: run.values.status, type: Any, value: Completed }
+          - { target: run.values.resource_module, type: Any, value: EmailCampaign }
+          - { target: run.values.resource_record_id, type: Any, expr: 'format("%v", record.ID)' }
+          - { target: run.values.campaign, type: Any, expr: "record.ID" }
+          - { target: run.values.message, type: Any, expr: 'format("Sent %v, skipped %v", sent, skipped)' }
+        meta:
+          name: Describe run
+          visual: { id: "87", parent: "1", value: null, xywh: [1600, 280, 0, 0] }
+      - id: 88
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "run" }
+        meta:
+          name: Save run log
+          visual: { id: "88", parent: "1", value: null, xywh: [1800, 280, 0, 0] }
+      - id: 90
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Campaign sent }
+          - { target: message, type: String, expr: 'format("Sent %v emails, skipped %v.", sent, skipped)' }
+          - { target: variant, type: String, value: success }
+        meta:
+          name: Tell the user
+          visual: { id: "90", parent: "1", value: null, xywh: [2000, 280, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: '(record.values.status == "Scheduled" || record.values.status == "Sending") && !isEmpty(record.values.template)'
+        meta: { name: Yes, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 15
+        expr: ""
+        meta: { name: No, visual: { id: "p10_15", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 25, meta: { visual: { id: "p20_25", parent: "1", value: null, points: [] } } }
+      - { parentid: 25, childid: 26, meta: { visual: { id: "p25_26", parent: "1", value: null, points: [] } } }
+      - { parentid: 26, childid: 30, meta: { visual: { id: "p26_30", parent: "1", value: null, points: [] } } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 30, childid: 40, meta: { name: Loop, visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 80, meta: { name: Done, visual: { id: "p30_80", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 45, meta: { visual: { id: "p40_45", parent: "1", value: null, points: [] } } }
+      - parentid: 45
+        childid: 50
+        expr: "c.values.email_opt_out != true && !isEmpty(c.values.email)"
+        meta: { name: Yes, visual: { id: "p45_50", parent: "1", value: null, points: [] } }
+      - parentid: 45
+        childid: 46
+        expr: ""
+        meta: { name: No, visual: { id: "p45_46", parent: "1", value: null, points: [] } }
+      - { parentid: 46, childid: 47, meta: { visual: { id: "p46_47", parent: "1", value: null, points: [] } } }
+      - { parentid: 47, childid: 48, meta: { visual: { id: "p47_48", parent: "1", value: null, points: [] } } }
+      - { parentid: 50, childid: 55, meta: { visual: { id: "p50_55", parent: "1", value: null, points: [] } } }
+      - { parentid: 55, childid: 60, meta: { visual: { id: "p55_60", parent: "1", value: null, points: [] } } }
+      - { parentid: 60, childid: 65, meta: { visual: { id: "p60_65", parent: "1", value: null, points: [] } } }
+      - { parentid: 65, childid: 66, meta: { visual: { id: "p65_66", parent: "1", value: null, points: [] } } }
+      - { parentid: 80, childid: 85, meta: { visual: { id: "p80_85", parent: "1", value: null, points: [] } } }
+      - { parentid: 85, childid: 86, meta: { visual: { id: "p85_86", parent: "1", value: null, points: [] } } }
+      - { parentid: 86, childid: 87, meta: { visual: { id: "p86_87", parent: "1", value: null, points: [] } } }
+      - { parentid: 87, childid: 88, meta: { visual: { id: "p87_88", parent: "1", value: null, points: [] } } }
+      - { parentid: 88, childid: 90, meta: { visual: { id: "p88_90", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Campaign: recount engagement from recipient rows
+  crm_campaign_refresh_stats:
+    meta:
+      name: "CRM: Campaign - refresh stats"
+      description: Recounts sent, opened, clicked, bounced and unsubscribed recipients onto the campaign record.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [EmailCampaign] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: expressions
+        arguments:
+          - { target: total, type: Integer, value: "0" }
+          - { target: sent, type: Integer, value: "0" }
+          - { target: opened, type: Integer, value: "0" }
+          - { target: clicked, type: Integer, value: "0" }
+          - { target: bounced, type: Integer, value: "0" }
+          - { target: unsub, type: Integer, value: "0" }
+        meta:
+          name: Init counters
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 20
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: CampaignRecipient }
+          - { target: query, type: String, expr: 'format("campaign = %v", record.ID)' }
+        results:
+          - { target: r, expr: "record" }
+        meta:
+          name: Each recipient
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 30
+        kind: expressions
+        arguments:
+          - { target: total, type: Integer, expr: "total + 1" }
+          - { target: sent, type: Integer, expr: "sent + (isEmpty(r.values.sent_at) ? 0 : 1)" }
+          - { target: opened, type: Integer, expr: "opened + (isEmpty(r.values.opened_at) ? 0 : 1)" }
+          - { target: clicked, type: Integer, expr: "clicked + (isEmpty(r.values.clicked_at) ? 0 : 1)" }
+          - { target: bounced, type: Integer, expr: 'bounced + (r.values.status == "Bounced" ? 1 : 0)' }
+          - { target: unsub, type: Integer, expr: 'unsub + (r.values.status == "Unsubscribed" ? 1 : 0)' }
+        meta:
+          name: Count
+          visual: { id: "30", parent: "1", value: null, xywh: [600, 0, 0, 0] }
+      - id: 35
+        kind: continue
+        meta:
+          name: Next recipient
+          visual: { id: "35", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 40
+        kind: expressions
+        arguments:
+          - { target: record.values.recipients_count, type: Any, expr: "total" }
+          - { target: record.values.sent_count, type: Any, expr: "sent" }
+          - { target: record.values.opened_count, type: Any, expr: "opened" }
+          - { target: record.values.clicked_count, type: Any, expr: "clicked" }
+          - { target: record.values.bounced_count, type: Any, expr: "bounced" }
+          - { target: record.values.unsubscribed_count, type: Any, expr: "unsub" }
+        meta:
+          name: Copy to campaign
+          visual: { id: "40", parent: "1", value: null, xywh: [600, 200, 0, 0] }
+      - id: 45
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "record" }
+        meta:
+          name: Save campaign
+          visual: { id: "45", parent: "1", value: null, xywh: [800, 200, 0, 0] }
+      - id: 50
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Stats updated }
+          - { target: message, type: String, expr: 'format("%v recipients: %v sent, %v opened, %v clicked.", total, sent, opened, clicked)' }
+          - { target: variant, type: String, value: info }
+        meta:
+          name: Tell the user
+          visual: { id: "50", parent: "1", value: null, xywh: [1000, 200, 0, 0] }
+    paths:
+      - { parentid: 10, childid: 20, meta: { visual: { id: "p10_20", parent: "1", value: null, points: [] } } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 20, childid: 30, meta: { name: Loop, visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
+      - { parentid: 20, childid: 40, meta: { name: Done, visual: { id: "p20_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 35, meta: { visual: { id: "p30_35", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 45, meta: { visual: { id: "p40_45", parent: "1", value: null, points: [] } } }
+      - { parentid: 45, childid: 50, meta: { visual: { id: "p45_50", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Recipient engagement: stamp timestamps/counters when the status changes.
+  # Webhooks (ESP events, tracking endpoint) only need to PATCH the status.
+  crm_recipient_engagement:
+    meta:
+      name: "CRM: Recipient engagement"
+      description: Stamps opened/clicked/bounced/unsubscribed timestamps and counters when a recipient status changes; unsubscribes also opt the contact out.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: beforeUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [CampaignRecipient] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 240, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Status changed to
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 240, 0, 0] }
+      - id: 20
+        kind: expressions
+        arguments:
+          - { target: record.values.opened_at, type: Any, expr: "coalesce(record.values.opened_at, now())" }
+          - { target: record.values.open_count, type: Any, expr: "float(coalesce(record.values.open_count, 0)) + 1" }
+        meta:
+          name: Opened
+          visual: { id: "20", parent: "1", value: null, xywh: [450, 0, 0, 0] }
+      - id: 30
+        kind: expressions
+        arguments:
+          - { target: record.values.opened_at, type: Any, expr: "coalesce(record.values.opened_at, now())" }
+          - { target: record.values.clicked_at, type: Any, expr: "coalesce(record.values.clicked_at, now())" }
+          - { target: record.values.click_count, type: Any, expr: "float(coalesce(record.values.click_count, 0)) + 1" }
+        meta:
+          name: Clicked
+          visual: { id: "30", parent: "1", value: null, xywh: [450, 160, 0, 0] }
+      - id: 40
+        kind: expressions
+        arguments:
+          - { target: record.values.bounced_at, type: Any, expr: "coalesce(record.values.bounced_at, now())" }
+        meta:
+          name: Bounced
+          visual: { id: "40", parent: "1", value: null, xywh: [450, 320, 0, 0] }
+      - id: 50
+        kind: expressions
+        arguments:
+          - { target: record.values.unsubscribed_at, type: Any, expr: "coalesce(record.values.unsubscribed_at, now())" }
+        meta:
+          name: Unsubscribed
+          visual: { id: "50", parent: "1", value: null, xywh: [450, 480, 0, 0] }
+      - id: 55
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: record, type: ID, expr: "record.values.contact" }
+        results:
+          - { target: contact, expr: "record" }
+        meta:
+          name: Load contact
+          visual: { id: "55", parent: "1", value: null, xywh: [700, 480, 0, 0] }
+      - id: 56
+        kind: expressions
+        arguments:
+          - { target: contact.values.email_opt_out, type: Any, expr: "true" }
+          - { target: contact.values.unsubscribed_at, type: Any, expr: "now()" }
+        meta:
+          name: Opt contact out
+          visual: { id: "56", parent: "1", value: null, xywh: [950, 480, 0, 0] }
+      - id: 57
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "contact" }
+        meta:
+          name: Save contact
+          visual: { id: "57", parent: "1", value: null, xywh: [1200, 480, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [1450, 240, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: 'record.values.status == "Opened" && oldRecord.values.status != "Opened"'
+        meta: { name: Opened, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 30
+        expr: 'record.values.status == "Clicked" && oldRecord.values.status != "Clicked"'
+        meta: { name: Clicked, visual: { id: "p10_30", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 40
+        expr: 'record.values.status == "Bounced" && oldRecord.values.status != "Bounced"'
+        meta: { name: Bounced, visual: { id: "p10_40", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 50
+        expr: 'record.values.status == "Unsubscribed" && oldRecord.values.status != "Unsubscribed"'
+        meta: { name: Unsubscribed, visual: { id: "p10_50", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 99
+        expr: ""
+        meta: { name: Otherwise, visual: { id: "p10_99", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 99, meta: { visual: { id: "p20_99", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 99, meta: { visual: { id: "p30_99", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 99, meta: { visual: { id: "p40_99", parent: "1", value: null, points: [] } } }
+      - { parentid: 50, childid: 55, meta: { visual: { id: "p50_55", parent: "1", value: null, points: [] } } }
+      - { parentid: 55, childid: 56, meta: { visual: { id: "p55_56", parent: "1", value: null, points: [] } } }
+      - { parentid: 56, childid: 57, meta: { visual: { id: "p56_57", parent: "1", value: null, points: [] } } }
+      - { parentid: 57, childid: 99, meta: { visual: { id: "p57_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Deal won webhook (API call node). Disabled until you set the URL.
+  crm_deal_won_webhook:
+    meta:
+      name: "CRM: Deal won webhook"
+      description: POSTs the won deal as JSON to an external endpoint. Disabled by default; set the URL in the HTTP request step and enable.
+    enabled: false
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: afterUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Just won?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 20
+        kind: function
+        ref: httpRequestSend
+        arguments:
+          - { target: url, type: String, value: "https://example.com/webhooks/crm/deal-won" }
+          - { target: method, type: String, value: POST }
+          - { target: headerContentType, type: String, value: application/json }
+          - { target: timeout, type: Duration, value: "10s" }
+          - { target: body, type: String, expr: "toJSON(record)" }
+        results:
+          - { target: httpStatus, expr: "status" }
+        meta:
+          name: POST to webhook
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 0, 0, 0] }
+      - id: 30
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: AutomationRun }
+        results:
+          - { target: run, expr: "record" }
+        meta:
+          name: New run log
+          visual: { id: "30", parent: "1", value: null, xywh: [600, 0, 0, 0] }
+      - id: 31
+        kind: expressions
+        arguments:
+          - { target: run.values.workflow, type: Any, value: crm_deal_won_webhook }
+          - { target: run.values.workflow_name, type: Any, value: Deal won webhook }
+          - { target: run.values.trigger, type: Any, value: Deal updated }
+          - { target: run.values.status, type: Any, value: Completed }
+          - { target: run.values.resource_module, type: Any, value: Deal }
+          - { target: run.values.resource_record_id, type: Any, expr: 'format("%v", record.ID)' }
+          - { target: run.values.deal, type: Any, expr: "record.ID" }
+          - { target: run.values.message, type: Any, expr: '"Webhook response: " + httpStatus' }
+        meta:
+          name: Describe run
+          visual: { id: "31", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 32
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "run" }
+        meta:
+          name: Save run log
+          visual: { id: "32", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [1200, 80, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: 'record.values.stage == "Won" && oldRecord.values.stage != "Won"'
+        meta: { name: Won now, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 99
+        expr: ""
+        meta: { name: Otherwise, visual: { id: "p10_99", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 30, meta: { visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 31, meta: { visual: { id: "p30_31", parent: "1", value: null, points: [] } } }
+      - { parentid: 31, childid: 32, meta: { visual: { id: "p31_32", parent: "1", value: null, points: [] } } }
+      - { parentid: 32, childid: 99, meta: { visual: { id: "p32_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Setup: create the default pipeline stages (Settings page button)
+  crm_setup_default_stages:
+    meta:
+      name: "CRM: Setup - default deal stages"
+      description: Creates the six default DealStage records (New, Qualified, Proposal, Negotiation, Won, Lost) if none exist.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:namespace
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: function
+        ref: composeRecordsSearch
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: DealStage }
+          - { target: limit, type: UnsignedInteger, value: "1" }
+          - { target: incTotal, type: Boolean, value: "true" }
+        results:
+          - { target: existing, expr: "total" }
+        meta:
+          name: Any stages yet?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 15
+        kind: gateway
+        ref: excl
+        meta:
+          name: Empty?
+          visual: { id: "15", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 16
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Nothing to do }
+          - { target: message, type: String, value: Deal stages already exist. }
+          - { target: variant, type: String, value: warning }
+        meta:
+          name: Already set up
+          visual: { id: "16", parent: "1", value: null, xywh: [400, 280, 0, 0] }
+      # one New/Fill/Create triple per stage
+      - { id: 20, kind: function, ref: composeRecordsNew, arguments: [ { target: namespace, type: Handle, value: crm }, { target: module, type: Handle, value: DealStage } ], results: [ { target: s, expr: "record" } ], meta: { name: "New", visual: { id: "20", parent: "1", value: null, xywh: [600, 0, 0, 0] } } }
+      - { id: 21, kind: expressions, arguments: [ { target: s.values.name, type: Any, value: New }, { target: s.values.position, type: Any, value: "1" }, { target: s.values.probability, type: Any, value: "10" } ], meta: { name: "New: values", visual: { id: "21", parent: "1", value: null, xywh: [600, 120, 0, 0] } } }
+      - { id: 22, kind: function, ref: composeRecordsCreate, arguments: [ { target: record, type: ComposeRecord, expr: "s" } ], meta: { name: "New: save", visual: { id: "22", parent: "1", value: null, xywh: [600, 240, 0, 0] } } }
+      - { id: 30, kind: function, ref: composeRecordsNew, arguments: [ { target: namespace, type: Handle, value: crm }, { target: module, type: Handle, value: DealStage } ], results: [ { target: s, expr: "record" } ], meta: { name: "Qualified", visual: { id: "30", parent: "1", value: null, xywh: [800, 0, 0, 0] } } }
+      - { id: 31, kind: expressions, arguments: [ { target: s.values.name, type: Any, value: Qualified }, { target: s.values.position, type: Any, value: "2" }, { target: s.values.probability, type: Any, value: "20" } ], meta: { name: "Qualified: values", visual: { id: "31", parent: "1", value: null, xywh: [800, 120, 0, 0] } } }
+      - { id: 32, kind: function, ref: composeRecordsCreate, arguments: [ { target: record, type: ComposeRecord, expr: "s" } ], meta: { name: "Qualified: save", visual: { id: "32", parent: "1", value: null, xywh: [800, 240, 0, 0] } } }
+      - { id: 40, kind: function, ref: composeRecordsNew, arguments: [ { target: namespace, type: Handle, value: crm }, { target: module, type: Handle, value: DealStage } ], results: [ { target: s, expr: "record" } ], meta: { name: "Proposal", visual: { id: "40", parent: "1", value: null, xywh: [1000, 0, 0, 0] } } }
+      - { id: 41, kind: expressions, arguments: [ { target: s.values.name, type: Any, value: Proposal }, { target: s.values.position, type: Any, value: "3" }, { target: s.values.probability, type: Any, value: "40" } ], meta: { name: "Proposal: values", visual: { id: "41", parent: "1", value: null, xywh: [1000, 120, 0, 0] } } }
+      - { id: 42, kind: function, ref: composeRecordsCreate, arguments: [ { target: record, type: ComposeRecord, expr: "s" } ], meta: { name: "Proposal: save", visual: { id: "42", parent: "1", value: null, xywh: [1000, 240, 0, 0] } } }
+      - { id: 50, kind: function, ref: composeRecordsNew, arguments: [ { target: namespace, type: Handle, value: crm }, { target: module, type: Handle, value: DealStage } ], results: [ { target: s, expr: "record" } ], meta: { name: "Negotiation", visual: { id: "50", parent: "1", value: null, xywh: [1200, 0, 0, 0] } } }
+      - { id: 51, kind: expressions, arguments: [ { target: s.values.name, type: Any, value: Negotiation }, { target: s.values.position, type: Any, value: "4" }, { target: s.values.probability, type: Any, value: "60" } ], meta: { name: "Negotiation: values", visual: { id: "51", parent: "1", value: null, xywh: [1200, 120, 0, 0] } } }
+      - { id: 52, kind: function, ref: composeRecordsCreate, arguments: [ { target: record, type: ComposeRecord, expr: "s" } ], meta: { name: "Negotiation: save", visual: { id: "52", parent: "1", value: null, xywh: [1200, 240, 0, 0] } } }
+      - { id: 60, kind: function, ref: composeRecordsNew, arguments: [ { target: namespace, type: Handle, value: crm }, { target: module, type: Handle, value: DealStage } ], results: [ { target: s, expr: "record" } ], meta: { name: "Won", visual: { id: "60", parent: "1", value: null, xywh: [1400, 0, 0, 0] } } }
+      - { id: 61, kind: expressions, arguments: [ { target: s.values.name, type: Any, value: Won }, { target: s.values.position, type: Any, value: "5" }, { target: s.values.probability, type: Any, value: "100" }, { target: s.values.is_closed, type: Any, expr: "true" }, { target: s.values.is_won, type: Any, expr: "true" } ], meta: { name: "Won: values", visual: { id: "61", parent: "1", value: null, xywh: [1400, 120, 0, 0] } } }
+      - { id: 62, kind: function, ref: composeRecordsCreate, arguments: [ { target: record, type: ComposeRecord, expr: "s" } ], meta: { name: "Won: save", visual: { id: "62", parent: "1", value: null, xywh: [1400, 240, 0, 0] } } }
+      - { id: 70, kind: function, ref: composeRecordsNew, arguments: [ { target: namespace, type: Handle, value: crm }, { target: module, type: Handle, value: DealStage } ], results: [ { target: s, expr: "record" } ], meta: { name: "Lost", visual: { id: "70", parent: "1", value: null, xywh: [1600, 0, 0, 0] } } }
+      - { id: 71, kind: expressions, arguments: [ { target: s.values.name, type: Any, value: Lost }, { target: s.values.position, type: Any, value: "6" }, { target: s.values.probability, type: Any, value: "0" }, { target: s.values.is_closed, type: Any, expr: "true" } ], meta: { name: "Lost: values", visual: { id: "71", parent: "1", value: null, xywh: [1600, 120, 0, 0] } } }
+      - { id: 72, kind: function, ref: composeRecordsCreate, arguments: [ { target: record, type: ComposeRecord, expr: "s" } ], meta: { name: "Lost: save", visual: { id: "72", parent: "1", value: null, xywh: [1600, 240, 0, 0] } } }
+      - id: 80
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Pipeline ready }
+          - { target: message, type: String, value: Created 6 default deal stages. }
+          - { target: variant, type: String, value: success }
+        meta:
+          name: Tell the user
+          visual: { id: "80", parent: "1", value: null, xywh: [1800, 120, 0, 0] }
+    paths:
+      - { parentid: 10, childid: 15, meta: { visual: { id: "p10_15", parent: "1", value: null, points: [] } } }
+      - parentid: 15
+        childid: 20
+        expr: "existing == 0"
+        meta: { name: Yes, visual: { id: "p15_20", parent: "1", value: null, points: [] } }
+      - parentid: 15
+        childid: 16
+        expr: ""
+        meta: { name: No, visual: { id: "p15_16", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 21, meta: { visual: { id: "p20_21", parent: "1", value: null, points: [] } } }
+      - { parentid: 21, childid: 22, meta: { visual: { id: "p21_22", parent: "1", value: null, points: [] } } }
+      - { parentid: 22, childid: 30, meta: { visual: { id: "p22_30", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 31, meta: { visual: { id: "p30_31", parent: "1", value: null, points: [] } } }
+      - { parentid: 31, childid: 32, meta: { visual: { id: "p31_32", parent: "1", value: null, points: [] } } }
+      - { parentid: 32, childid: 40, meta: { visual: { id: "p32_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 41, meta: { visual: { id: "p40_41", parent: "1", value: null, points: [] } } }
+      - { parentid: 41, childid: 42, meta: { visual: { id: "p41_42", parent: "1", value: null, points: [] } } }
+      - { parentid: 42, childid: 50, meta: { visual: { id: "p42_50", parent: "1", value: null, points: [] } } }
+      - { parentid: 50, childid: 51, meta: { visual: { id: "p50_51", parent: "1", value: null, points: [] } } }
+      - { parentid: 51, childid: 52, meta: { visual: { id: "p51_52", parent: "1", value: null, points: [] } } }
+      - { parentid: 52, childid: 60, meta: { visual: { id: "p52_60", parent: "1", value: null, points: [] } } }
+      - { parentid: 60, childid: 61, meta: { visual: { id: "p60_61", parent: "1", value: null, points: [] } } }
+      - { parentid: 61, childid: 62, meta: { visual: { id: "p61_62", parent: "1", value: null, points: [] } } }
+      - { parentid: 62, childid: 70, meta: { visual: { id: "p62_70", parent: "1", value: null, points: [] } } }
+      - { parentid: 70, childid: 71, meta: { visual: { id: "p70_71", parent: "1", value: null, points: [] } } }
+      - { parentid: 71, childid: 72, meta: { visual: { id: "p71_72", parent: "1", value: null, points: [] } } }
+      - { parentid: 72, childid: 80, meta: { visual: { id: "p72_80", parent: "1", value: null, points: [] } } }

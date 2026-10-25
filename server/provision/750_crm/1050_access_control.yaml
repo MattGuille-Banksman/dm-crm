@@ -1,0 +1,41 @@
+# CRM roles and permissions
+#
+# Authenticated users can already read namespaces, modules, pages, charts and
+# records (000_base). CRM users can also create and edit CRM records and run
+# the CRM workflows (buttons on the campaign and settings pages).
+#
+# Assign users to the role in Admin Area > Roles, or with:
+#   corteza-server roles useradd crm-user <email>
+
+roles:
+  crm-user:
+    name: CRM user
+    meta:
+      description: Sales and marketing users of the CRM namespace
+
+allow:
+  crm-user:
+    corteza::compose:namespace/crm:
+      - read
+      - pages.search
+      - modules.search
+      - charts.search
+
+    corteza::compose:module/crm/*:
+      - read
+      - record.create
+      - records.search
+
+    corteza::compose:module-field/crm/*/*:
+      - record.value.read
+      - record.value.update
+
+    corteza::compose:record/crm/*/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::automation:workflow/*:
+      - read
+      - execute
