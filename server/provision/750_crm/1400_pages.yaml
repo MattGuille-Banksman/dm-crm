@@ -194,6 +194,9 @@ pages:
                 - name: lead_source
                 - name: owner
                 - name: tags
+                - name: email_domain
+                - name: city
+                - name: country
                 - name: email_opt_out
                 - name: unsubscribed_at
                 - name: last_activity_at
@@ -267,6 +270,34 @@ pages:
                 - name: sent_at
                 - name: opened_at
                 - name: clicked_at
+          - blockid: 7
+            title: Deals and engagement
+            kind: Record
+            xywh: [0, 68, 24, 22]
+            options:
+              fields:
+                - name: deals_count
+                - name: open_deals_count
+                - name: won_deals_count
+                - name: open_pipeline
+                - name: won_revenue
+                - name: emails_sent_count
+                - name: emails_opened_count
+                - name: emails_clicked_count
+                - name: last_email_opened_at
+                - name: last_email_clicked_at
+          - blockid: 8
+            title: Static lists
+            kind: RecordList
+            xywh: [24, 68, 24, 22]
+            options:
+              module: SegmentMember
+              prefilter: "contact = ${recordID}"
+              presort: createdAt DESC
+              fields:
+                - name: segment
+                - name: source
+                - name: added_at
         page_layouts:
           RecordContactDefault:
             primary: true
@@ -287,6 +318,8 @@ pages:
               - { blockID: 4, xywh: [0, 40, 24, 14] }
               - { blockID: 5, xywh: [24, 40, 24, 14] }
               - { blockID: 6, xywh: [0, 54, 48, 14] }
+              - { blockID: 7, xywh: [0, 68, 24, 22] }
+              - { blockID: 8, xywh: [24, 68, 24, 22] }
 
       RecordContactAddress:
         title: Contact address
@@ -322,6 +355,188 @@ pages:
                 back: { enabled: true }
             blocks:
               - { blockID: 1, xywh: [0, 0, 24, 24] }
+
+      # -----------------------------------------------------------------------
+      # Lists (segments), HubSpot style
+      CrmSegments:
+        title: Lists
+        visible: true
+        weight: 1
+        blocks:
+          - blockid: 1
+            title: Lists
+            kind: RecordList
+            xywh: [0, 0, 48, 24]
+            options:
+              module: Segment
+              presort: name ASC
+              perPage: 25
+              fields:
+                - name: name
+                - name: list_type
+                - name: category
+                - name: contact_count
+                - name: last_refreshed_at
+                - name: owner
+          - blockid: 2
+            title: How lists work
+            kind: Content
+            xywh: [0, 24, 48, 8]
+            options:
+              body: >-
+                <p><b>Active</b> lists update automatically: anyone matching the filter is in the list.
+                <b>Static</b> lists are a fixed set of contacts: take a snapshot of the filter, or add contacts by hand.
+                Pick a list as the audience of an email campaign.</p>
+        page_layouts:
+          CrmSegmentsDefault:
+            primary: true
+            meta: { title: Lists }
+            config:
+              visibility: { expression: "" }
+            blocks:
+              - { blockID: 1, xywh: [0, 0, 48, 24] }
+              - { blockID: 2, xywh: [0, 24, 48, 8] }
+        pages:
+          RecordSegment:
+            title: List
+            module: Segment
+            visible: false
+            blocks:
+              - blockid: 1
+                title: List
+                kind: Record
+                xywh: [0, 0, 20, 30]
+                options:
+                  fields:
+                    - name: name
+                    - name: list_type
+                    - name: filter
+                    - name: category
+                    - name: description
+                    - name: owner
+                    - name: contact_count
+                    - name: last_refreshed_at
+              - blockid: 2
+                title: Actions
+                kind: Automation
+                xywh: [20, 0, 28, 5]
+                options:
+                  buttons:
+                    - label: Refresh count
+                      resourceType: compose:record
+                      workflow: crm_segment_refresh
+                      stepID: 10
+                      variant: primary
+                    - label: Save snapshot (static lists)
+                      resourceType: compose:record
+                      workflow: crm_segment_snapshot
+                      stepID: 10
+                      variant: light
+              - blockid: 3
+                title: Filter cheat sheet
+                kind: Content
+                xywh: [20, 5, 28, 25]
+                options:
+                  body: >-
+                    <p>Combine conditions with <code>AND</code>, <code>OR</code> and brackets. Text goes in single quotes.</p>
+                    <ul>
+                    <li>Lifecycle: <code>lifecycle_stage = 'Lead'</code>,
+                    <code>lifecycle_stage IN ('MQL', 'SQL')</code></li>
+                    <li>Source and owner: <code>lead_source = 'Event'</code>, <code>owner = ${userID}</code></li>
+                    <li>Text match: <code>job_title LIKE '%Director%'</code>, <code>email_domain = 'acme.com'</code>,
+                    <code>country = 'United Kingdom'</code></li>
+                    <li>Tags: <code>tags = 'vip'</code></li>
+                    <li>Email engagement: <code>emails_opened_count &gt; 0</code>,
+                    <code>last_email_clicked_at &gt;= DATE_SUB(NOW(), INTERVAL 30 DAY)</code>,
+                    <code>emails_sent_count &gt; 3 AND NOT (emails_opened_count &gt; 0)</code></li>
+                    <li>Deals: <code>open_deals_count &gt; 0</code>, <code>won_revenue &gt;= 10000</code>,
+                    <code>deals_count IS NULL</code> (never had a deal)</li>
+                    <li>Activity and dates: <code>last_activity_at &lt; DATE_SUB(NOW(), INTERVAL 90 DAY)</code>,
+                    <code>createdAt &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY)</code></li>
+                    </ul>
+                    <p>Unsubscribed contacts are always skipped when a campaign is sent.</p>
+                    <p>Tip: on the Contacts page use the filter icon on any column to explore,
+                    then copy the conditions here. Leave the filter empty to include every contact.</p>
+              - blockid: 4
+                title: Matching contacts (live filter)
+                kind: RecordList
+                xywh: [0, 30, 48, 24]
+                options:
+                  module: Contact
+                  prefilter: "${record.values.filter || ''}"
+                  presort: createdAt DESC
+                  perPage: 25
+                  hideAddButton: true
+                  fields:
+                    - name: full_name
+                    - name: email
+                    - name: company
+                    - name: lifecycle_stage
+                    - name: lead_source
+                    - name: owner
+              - blockid: 5
+                title: Saved members (static lists)
+                kind: RecordList
+                xywh: [0, 54, 48, 20]
+                options:
+                  module: SegmentMember
+                  prefilter: "segment = ${recordID}"
+                  presort: createdAt DESC
+                  perPage: 25
+                  fields:
+                    - name: contact
+                    - name: source
+                    - name: added_at
+            page_layouts:
+              RecordSegmentDefault:
+                primary: true
+                meta: { title: List }
+                config:
+                  visibility: { expression: "" }
+                  buttons:
+                    new: { enabled: true }
+                    edit: { enabled: true }
+                    submit: { enabled: true }
+                    delete: { enabled: true }
+                    clone: { enabled: true }
+                    back: { enabled: true }
+                blocks:
+                  - { blockID: 1, xywh: [0, 0, 20, 30] }
+                  - { blockID: 2, xywh: [20, 0, 28, 5] }
+                  - { blockID: 3, xywh: [20, 5, 28, 25] }
+                  - { blockID: 4, xywh: [0, 30, 48, 24] }
+                  - { blockID: 5, xywh: [0, 54, 48, 20] }
+
+          RecordSegmentMember:
+            title: List member
+            module: SegmentMember
+            visible: false
+            blocks:
+              - blockid: 1
+                title: List member
+                kind: Record
+                xywh: [0, 0, 24, 18]
+                options:
+                  fields:
+                    - name: segment
+                    - name: contact
+                    - name: source
+                    - name: added_at
+            page_layouts:
+              RecordSegmentMemberDefault:
+                primary: true
+                meta: { title: List member }
+                config:
+                  visibility: { expression: "" }
+                  buttons:
+                    new: { enabled: true }
+                    edit: { enabled: true }
+                    submit: { enabled: true }
+                    delete: { enabled: true }
+                    clone: { enabled: true }
+                    back: { enabled: true }
+                blocks:
+                  - { blockID: 1, xywh: [0, 0, 24, 18] }
 
   # ===========================================================================
   CrmCompanies:
@@ -370,6 +585,7 @@ pages:
               fields:
                 - name: name
                 - name: website
+                - name: domain
                 - name: industry
                 - name: company_size
                 - name: annual_revenue
@@ -858,11 +1074,12 @@ pages:
                 - name: name
                 - name: status
                 - name: template
+                - name: segment
+                - name: audience_query
                 - name: subject
                 - name: from_name
                 - name: from_email
                 - name: reply_to
-                - name: audience_query
                 - name: scheduled_at
                 - name: sent_at
                 - name: owner
@@ -980,7 +1197,7 @@ pages:
               - blockid: 1
                 title: Template
                 kind: Record
-                xywh: [0, 0, 48, 40]
+                xywh: [0, 0, 22, 56]
                 options:
                   fields:
                     - name: name
@@ -993,12 +1210,19 @@ pages:
               - blockid: 2
                 title: Merge tags
                 kind: Content
-                xywh: [0, 40, 48, 6]
+                xywh: [0, 56, 48, 6]
                 options:
                   body: >-
                     <p>Use these tags in the subject and bodies:
                     <code>{{first_name}}</code> <code>{{last_name}}</code>
-                    <code>{{full_name}}</code> <code>{{email}}</code>.</p>
+                    <code>{{full_name}}</code> <code>{{email}}</code>.
+                    The preview updates each time you save.</p>
+              - blockid: 3
+                title: Preview
+                kind: IFrame
+                xywh: [22, 0, 26, 56]
+                options:
+                  srcField: preview_url
             page_layouts:
               RecordEmailTemplateDefault:
                 primary: true
@@ -1013,8 +1237,9 @@ pages:
                     clone: { enabled: true }
                     back: { enabled: true }
                 blocks:
-                  - { blockID: 1, xywh: [0, 0, 48, 40] }
-                  - { blockID: 2, xywh: [0, 40, 48, 6] }
+                  - { blockID: 1, xywh: [0, 0, 22, 56] }
+                  - { blockID: 3, xywh: [22, 0, 26, 56] }
+                  - { blockID: 2, xywh: [0, 56, 48, 6] }
 
       CrmCampaignRecipients:
         title: Recipients
@@ -1266,6 +1491,11 @@ pages:
               workflow: crm_setup_default_stages
               stepID: 10
               variant: primary
+            - label: Enrich existing contacts from email
+              resourceType: compose:namespace
+              workflow: crm_contacts_enrich_existing
+              stepID: 10
+              variant: light
       - blockid: 2
         title: Deal stages
         kind: RecordList

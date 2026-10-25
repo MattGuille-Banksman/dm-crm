@@ -12,10 +12,11 @@ Source: [`server/provision/750_crm/`](../../provision/750_crm)
 | --- | --- |
 | `1000_namespace.yaml` | `crm` namespace |
 | `1050_access_control.yaml` | `crm-user` role and its permissions |
-| `1100_modules.yaml` | Data model (11 modules) |
+| `1100_modules.yaml` | Data model (13 modules) |
 | `1200_charts.yaml` | 15 report charts |
 | `1400_pages.yaml` | Navigation, list/record pages, pipeline board, dashboards |
-| `1600_workflows.yaml` | 11 automation flows |
+| `1600_workflows.yaml` | 18 automation flows |
+| `1700_settings.yaml` | DM-CRM branding, login page styles, column-resize code snippet |
 
 ## Install
 
@@ -138,6 +139,70 @@ endpoints are the one piece that needs a small Go service or an external
 tracker (most ESPs already provide webhooks). That's the recommended next
 step.
 
+## Lists (segments)
+
+**Contacts > Lists** works like HubSpot lists:
+
+- **Active** lists update automatically. A contact is in the list while it
+  matches the filter.
+- **Static** lists are a fixed set of contacts (module `SegmentMember`).
+  **Save snapshot** adds everyone currently matching the filter (no
+  duplicates); you can also add or remove members by hand.
+
+A filter is a Compose record query over Contact. The list page has a cheat
+sheet. Examples:
+
+```
+lifecycle_stage IN ('MQL', 'SQL') AND lead_source = 'Event'
+emails_sent_count > 3 AND NOT (emails_opened_count > 0)
+open_deals_count > 0 AND last_activity_at < DATE_SUB(NOW(), INTERVAL 30 DAY)
+```
+
+To make engagement and deal filters possible, workflows keep these contact
+fields up to date: deals, open deals, won deals, open pipeline value, won
+revenue, marketing emails sent / opened / clicked, and last open and click
+time. Pick a list as a campaign's **Audience segment**. The optional
+**Extra audience filter** narrows it further.
+
+## Email intelligence
+
+When a contact is created or saved, `crm_contact_defaults` reads the email
+address:
+
+- `jane.doe@brightwidgets.co.uk` fills First name *Jane*, Last name *Doe*
+  (only when both are empty), and Email domain *brightwidgets.co.uk*.
+- The contact is linked to the company whose **Email domain** matches. If
+  there isn't one, a company is created (named from the domain, e.g.
+  *Brightwidgets*, with its website set).
+- Free webmail domains (gmail, outlook, hotmail...) don't create companies,
+  and generic inboxes (info@, sales@, accounts@...) don't produce names.
+
+Company email domains are filled from the website automatically
+(`crm_company_defaults`). For contacts that existed before, use **Settings >
+Enrich existing contacts from email**.
+
+## HTML email templates
+
+The template's **HTML code** field is a plain code box: paste your full email
+HTML there. The **Preview** panel next to it renders the HTML in an isolated
+frame; it refreshes when you save.
+
+## Resizable columns
+
+Every record list supports drag-to-resize columns: drag the right edge of a
+column header, and double-click the edge to reset it. Widths are remembered
+per page in each browser. This is `branding/column-resize.js`, loaded on
+every web app through a Corteza **Code snippet** (Admin Area > Code
+snippets).
+
+## Page builder
+
+The **Page builder** button on CRM pages is Corteza's layout editor: it
+moves and resizes the boxes (blocks), adds new ones (lists, charts, metrics,
+buttons) and configures them. Only users who may edit pages see it.
+Administrators do; members of the **CRM user** role don't. Keep it for
+administrators to adjust the CRM without code.
+
 ## Reporting
 
 | Page | Charts |
@@ -158,12 +223,57 @@ update, delete records) under `/api/compose/namespace/{id}/module/{id}/record`.
 Workflows can be executed over `/api/automation/workflows/{id}/exec`. Use an
 auth client with a service user in the **CRM user** role for integrations.
 
+## Updating an existing instance
+
+Boot-time provisioning only installs the CRM on an empty database, and
+`corteza-server import --replace-existing` isn't safe on an instance that
+already has it. Corteza's importer has three problems:
+
+- it matches existing module fields by name across *all* modules, so it can
+  move fields such as `owner` or `name` from one module to another;
+- it re-creates workflow triggers on every import (duplicate triggers run
+  workflows several times);
+- it doesn't see disabled workflows, so importing one again fails as a
+  duplicate.
+
+Use the update script instead. Take a backup first:
+
+```bash
+docker compose exec -T db pg_dump -U corteza -d corteza -Fc > backups/corteza-before-update.dump
+```
+
+```bash
+bash branding/tools/update-existing-crm.sh corteza-server-1 corteza http://localhost:18080 you@example.com
+```
+
+It applies module changes through the REST API
+(`apply-crm-module-changes.ps1`, which only adds fields and options), then
+imports a package (`prepare-crm-update.sh`) that skips modules, fields and
+unchanged workflows and replaces only the pages and workflows listed in the
+script. It's safe to run more than once. When you change other pages or
+workflows, add them to the lists at the top of `update-existing-crm.sh`, and
+add new module fields to `apply-crm-module-changes.ps1`.
+
+Records imported without an owner (owner 0) can't be saved by anyone, admins
+included, until they have one. After a CSV import, set an owner, e.g.:
+
+```sql
+update compose_record set owned_by = <user id> where owned_by = 0 and rel_namespace = <crm namespace id>;
+```
+
 ## Known limitations and caveats
 
-- **Not yet run.** This package was written against the Corteza source in this
-  repo (envoy decoders, page and workflow formats) but hasn't been imported
-  into a running instance. Import it on a test database first and check the
-  server log for decoder or validation errors.
+- The segment, email intelligence, template preview and rollup workflows were
+  tested end to end against a copy of a live database. Campaign sending and
+  the follow-up delay haven't been exercised with a real SMTP server yet.
+- Workflow expressions can't index a function call directly
+  (`split(x, "@")[0]` doesn't parse): assign the result to a variable first.
+  Don't name variables after built-in functions (`count`, `sum`, `filter`...).
+- Contact rollups update when deals or campaign recipients change. Contacts
+  with no deals or emails yet have empty values, so filter with
+  `deals_count IS NULL` rather than `deals_count = 0`.
+- Company names created from email domains have no spaces
+  (`midstreamlighting.com` gives *Midstreamlighting*). Rename them as needed.
 - Probability is driven by stage. Manual edits are overwritten on save.
 - `crm_lead_followup` uses a 3-day delay step. Delayed workflow sessions are
   held by the server, so check how your deployment handles restarts during

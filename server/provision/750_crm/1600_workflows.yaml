@@ -98,11 +98,247 @@ workflows:
       - { parentid: 30, childid: 99, meta: { visual: { id: "p30_99", parent: "1", value: null, points: [] } } }
 
   # ===========================================================================
-  # Contact: display name, default lifecycle stage, unsubscribe timestamp
+  # Contact: email intelligence, display name, lifecycle default, unsubscribe
+  #
+  # From john.smith@acme.com it fills First name "John", Last name "Smith"
+  # (only when both are empty), sets Email domain "acme.com" and links the
+  # Company whose domain is acme.com, creating it when none exists. Free
+  # webmail domains and generic inboxes (info@, sales@...) are skipped.
   crm_contact_defaults:
     meta:
-      name: "CRM: Contact defaults"
-      description: Builds the contact display name, defaults lifecycle stage to Lead and stamps the unsubscribe time.
+      name: "CRM: Contact defaults and email intelligence"
+      description: Fills name, email domain and company from the email address, builds the display name, defaults lifecycle stage to Lead and stamps the unsubscribe time.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: beforeCreate
+        enabled: true
+        stepID: 1
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 0, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "1", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+      - resourceType: compose:record
+        eventType: beforeUpdate
+        enabled: true
+        stepID: 1
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t2"
+            parent: "1"
+            xywh: [0, 160, 0, 0]
+            edges:
+              - { parentID: "t2", childID: "1", meta: { visual: { id: "et2", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 1
+        kind: expressions
+        arguments:
+          - { target: email, type: String, expr: 'toLower(trim(coalesce(record.values.email, "")))' }
+          - { target: validEmail, type: Boolean, expr: "isEmail(email)" }
+          # appending separators guarantees enough elements for the indexes
+          # below; results are indexed through a variable because the
+          # expression parser can't index a function call directly
+          - { target: atParts, type: Any, expr: 'split(email + "@", "@")' }
+          - { target: local, type: String, expr: "atParts[0]" }
+          - { target: domain, type: String, expr: "atParts[1]" }
+          # hyphens are kept so jean-pascal.mollet stays Jean-Pascal Mollet
+          - { target: parts, type: Any, expr: 'split(replace(local, "_", ".", -1) + "..", ".")' }
+          - { target: generic, type: Boolean, expr: 'local in ["info", "sales", "hello", "hi", "contact", "admin", "support", "office", "team", "enquiries", "enquiry", "accounts", "billing", "hr", "jobs", "careers", "marketing", "noreply", "no-reply", "mail", "help", "service", "orders", "bookings", "reception"]' }
+          - { target: freeMail, type: Boolean, expr: 'domain in ["gmail.com", "googlemail.com", "yahoo.com", "yahoo.co.uk", "ymail.com", "hotmail.com", "hotmail.co.uk", "outlook.com", "live.com", "live.co.uk", "msn.com", "icloud.com", "me.com", "mac.com", "aol.com", "proton.me", "protonmail.com", "gmx.com", "gmx.co.uk", "mail.com", "yandex.com", "zoho.com", "btinternet.com", "sky.com", "virginmedia.com", "talktalk.net"]' }
+          - { target: nameable, type: Boolean, expr: 'validEmail && !generic && !match(local, "[0-9]")' }
+        meta:
+          name: Parse email address
+          visual: { id: "1", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 2
+        kind: gateway
+        ref: excl
+        meta:
+          name: Names empty?
+          visual: { id: "2", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 3
+        kind: expressions
+        arguments:
+          - { target: record.values.first_name, type: Any, expr: "trim(title(parts[0]))" }
+          - { target: record.values.last_name, type: Any, expr: 'trim(title(parts[2] != "" ? parts[2] : parts[1]))' }
+        meta:
+          name: Names from email
+          visual: { id: "3", parent: "1", value: null, xywh: [600, 0, 0, 0] }
+      - id: 4
+        kind: gateway
+        ref: excl
+        meta:
+          name: Company empty?
+          visual: { id: "4", parent: "1", value: null, xywh: [800, 80, 0, 0] }
+      - id: 5
+        kind: expressions
+        arguments:
+          - { target: found, type: Boolean, value: "false" }
+        meta:
+          name: Look for company
+          visual: { id: "5", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 6
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Company }
+          - { target: query, type: String, expr: "format(\"domain = '%s'\", domain)" }
+          - { target: limit, type: UnsignedInteger, value: "1" }
+        results:
+          - { target: co, expr: "record" }
+        meta:
+          name: Company with this domain
+          visual: { id: "6", parent: "1", value: null, xywh: [1200, 0, 0, 0] }
+      - id: 7
+        kind: expressions
+        arguments:
+          - { target: record.values.company, type: Any, expr: "co.ID" }
+          - { target: found, type: Boolean, value: "true" }
+        meta:
+          name: Link existing company
+          visual: { id: "7", parent: "1", value: null, xywh: [1400, -160, 0, 0] }
+      - id: 71
+        kind: break
+        meta:
+          name: Stop looking
+          visual: { id: "71", parent: "1", value: null, xywh: [1600, -160, 0, 0] }
+      - id: 8
+        kind: gateway
+        ref: excl
+        meta:
+          name: Found one?
+          visual: { id: "8", parent: "1", value: null, xywh: [1400, 0, 0, 0] }
+      - id: 81
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Company }
+        results:
+          - { target: newCo, expr: "record" }
+        meta:
+          name: New company
+          visual: { id: "81", parent: "1", value: null, xywh: [1600, 120, 0, 0] }
+      - id: 82
+        kind: expressions
+        arguments:
+          - { target: domParts, type: Any, expr: 'split(domain, ".")' }
+          - { target: newCo.values.name, type: Any, expr: "trim(title(domParts[0]))" }
+          - { target: newCo.values.domain, type: Any, expr: "domain" }
+          - { target: newCo.values.website, type: Any, expr: '"https://" + domain' }
+          - { target: newCo.values.lifecycle_stage, type: Any, value: Lead }
+        meta:
+          name: Company from domain
+          visual: { id: "82", parent: "1", value: null, xywh: [1800, 120, 0, 0] }
+      - id: 83
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "newCo" }
+        results:
+          - { target: newCo, expr: "record" }
+        meta:
+          name: Save company
+          visual: { id: "83", parent: "1", value: null, xywh: [2000, 120, 0, 0] }
+      - id: 84
+        kind: expressions
+        arguments:
+          - { target: record.values.company, type: Any, expr: "newCo.ID" }
+        meta:
+          name: Link new company
+          visual: { id: "84", parent: "1", value: null, xywh: [2200, 120, 0, 0] }
+      - id: 10
+        kind: expressions
+        arguments:
+          - { target: fullName, type: String, expr: 'trim(coalesce(record.values.first_name, "") + " " + coalesce(record.values.last_name, ""))' }
+          - { target: record.values.full_name, type: Any, expr: 'fullName == "" ? coalesce(record.values.email, "") : fullName' }
+          - { target: record.values.lifecycle_stage, type: Any, expr: 'coalesce(record.values.lifecycle_stage, "Lead")' }
+          - { target: record.values.email_domain, type: Any, expr: 'validEmail ? domain : ""' }
+        meta:
+          name: Name and lifecycle defaults
+          visual: { id: "10", parent: "1", value: null, xywh: [2400, 80, 0, 0] }
+      - id: 20
+        kind: gateway
+        ref: excl
+        meta:
+          name: Just unsubscribed?
+          visual: { id: "20", parent: "1", value: null, xywh: [2600, 80, 0, 0] }
+      - id: 30
+        kind: expressions
+        arguments:
+          - { target: record.values.unsubscribed_at, type: Any, expr: "now()" }
+        meta:
+          name: Stamp unsubscribed at
+          visual: { id: "30", parent: "1", value: null, xywh: [2800, 0, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [3000, 80, 0, 0] }
+    paths:
+      - { parentid: 1, childid: 2, meta: { visual: { id: "p1_2", parent: "1", value: null, points: [] } } }
+      - parentid: 2
+        childid: 3
+        expr: "nameable && isEmpty(record.values.first_name) && isEmpty(record.values.last_name)"
+        meta: { name: Fill names, visual: { id: "p2_3", parent: "1", value: null, points: [] } }
+      - parentid: 2
+        childid: 4
+        expr: ""
+        meta: { name: Keep names, visual: { id: "p2_4", parent: "1", value: null, points: [] } }
+      - { parentid: 3, childid: 4, meta: { visual: { id: "p3_4", parent: "1", value: null, points: [] } } }
+      - parentid: 4
+        childid: 5
+        expr: "validEmail && !freeMail && isEmpty(record.values.company)"
+        meta: { name: Link company, visual: { id: "p4_5", parent: "1", value: null, points: [] } }
+      - parentid: 4
+        childid: 10
+        expr: ""
+        meta: { name: Keep company, visual: { id: "p4_10", parent: "1", value: null, points: [] } }
+      - { parentid: 5, childid: 6, meta: { visual: { id: "p5_6", parent: "1", value: null, points: [] } } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 6, childid: 7, meta: { name: Loop, visual: { id: "p6_7", parent: "1", value: null, points: [] } } }
+      - { parentid: 6, childid: 8, meta: { name: Done, visual: { id: "p6_8", parent: "1", value: null, points: [] } } }
+      - { parentid: 7, childid: 71, meta: { visual: { id: "p7_71", parent: "1", value: null, points: [] } } }
+      - parentid: 8
+        childid: 10
+        expr: "found"
+        meta: { name: Yes, visual: { id: "p8_10", parent: "1", value: null, points: [] } }
+      - parentid: 8
+        childid: 81
+        expr: ""
+        meta: { name: No, visual: { id: "p8_81", parent: "1", value: null, points: [] } }
+      - { parentid: 81, childid: 82, meta: { visual: { id: "p81_82", parent: "1", value: null, points: [] } } }
+      - { parentid: 82, childid: 83, meta: { visual: { id: "p82_83", parent: "1", value: null, points: [] } } }
+      - { parentid: 83, childid: 84, meta: { visual: { id: "p83_84", parent: "1", value: null, points: [] } } }
+      - { parentid: 84, childid: 10, meta: { visual: { id: "p84_10", parent: "1", value: null, points: [] } } }
+      - { parentid: 10, childid: 20, meta: { visual: { id: "p10_20", parent: "1", value: null, points: [] } } }
+      - parentid: 20
+        childid: 30
+        expr: "record.values.email_opt_out == true && isEmpty(record.values.unsubscribed_at)"
+        meta: { name: Opted out, visual: { id: "p20_30", parent: "1", value: null, points: [] } }
+      - parentid: 20
+        childid: 99
+        expr: ""
+        meta: { name: Otherwise, visual: { id: "p20_99", parent: "1", value: null, points: [] } }
+      - { parentid: 30, childid: 99, meta: { visual: { id: "p30_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Company: derive the email domain from the website
+  crm_company_defaults:
+    meta:
+      name: "CRM: Company defaults"
+      description: Fills the company email domain from its website (https://www.acme.com/about -> acme.com) when it is empty.
     enabled: true
     trace: false
     keepsessions: 0
@@ -113,7 +349,7 @@ workflows:
         stepID: 10
         constraints:
           - { name: namespace.handle, op: "=", values: [crm] }
-          - { name: module.handle, op: "=", values: [Contact] }
+          - { name: module.handle, op: "=", values: [Company] }
         meta:
           visual:
             id: "t1"
@@ -127,7 +363,79 @@ workflows:
         stepID: 10
         constraints:
           - { name: namespace.handle, op: "=", values: [crm] }
-          - { name: module.handle, op: "=", values: [Contact] }
+          - { name: module.handle, op: "=", values: [Company] }
+        meta:
+          visual:
+            id: "t2"
+            parent: "1"
+            xywh: [0, 160, 0, 0]
+            edges:
+              - { parentID: "t2", childID: "10", meta: { visual: { id: "et2", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Domain empty?
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+      - id: 20
+        kind: expressions
+        arguments:
+          - { target: w1, type: String, expr: 'replace(replace(toLower(trim(format("%v", record.values.website))), "https://", "", 1), "http://", "", 1)' }
+          - { target: w2, type: String, expr: 'hasPrefix(w1, "www.") ? substring(w1, 4, -1) : w1' }
+          - { target: w3, type: Any, expr: 'split(w2 + "/", "/")' }
+          - { target: w4, type: Any, expr: 'split(w3[0] + ":", ":")' }
+          - { target: record.values.domain, type: Any, expr: "w4[0]" }
+        meta:
+          name: Domain from website
+          visual: { id: "20", parent: "1", value: null, xywh: [500, 0, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [750, 80, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: "isEmpty(record.values.domain) && !isEmpty(record.values.website)"
+        meta: { name: Fill domain, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 99
+        expr: ""
+        meta: { name: Otherwise, visual: { id: "p10_99", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 99, meta: { visual: { id: "p20_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Email template: build the preview frame URL from the pasted HTML
+  crm_email_template_preview:
+    meta:
+      name: "CRM: Email template preview"
+      description: On save, turns the template HTML into a data URL shown in the preview frame next to the editor.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: beforeCreate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [EmailTemplate] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 0, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+      - resourceType: compose:record
+        eventType: beforeUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [EmailTemplate] }
         meta:
           visual:
             id: "t2"
@@ -139,41 +447,13 @@ workflows:
       - id: 10
         kind: expressions
         arguments:
-          - { target: fullName, type: String, expr: 'trim(coalesce(record.values.first_name, "") + " " + coalesce(record.values.last_name, ""))' }
-          - { target: record.values.full_name, type: Any, expr: 'fullName == "" ? coalesce(record.values.email, "") : fullName' }
-          - { target: record.values.lifecycle_stage, type: Any, expr: 'coalesce(record.values.lifecycle_stage, "Lead")' }
+          - { target: html, type: String, expr: 'coalesce(record.values.body_html, "<p style=\"font-family:sans-serif;color:#64748B;padding:24px\">Paste your HTML on the left and click Save to see the preview here.</p>")' }
+          # the src=:// parameter keeps the page block from prefixing http://
+          - { target: record.values.preview_url, type: Any, expr: '"data:text/html;charset=utf-8;src=://dmcrm;base64," + base64encode(html)' }
         meta:
-          name: Name and lifecycle defaults
+          name: Build preview
           visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
-      - id: 20
-        kind: gateway
-        ref: excl
-        meta:
-          name: Just unsubscribed?
-          visual: { id: "20", parent: "1", value: null, xywh: [500, 80, 0, 0] }
-      - id: 30
-        kind: expressions
-        arguments:
-          - { target: record.values.unsubscribed_at, type: Any, expr: "now()" }
-        meta:
-          name: Stamp unsubscribed at
-          visual: { id: "30", parent: "1", value: null, xywh: [750, 0, 0, 0] }
-      - id: 99
-        kind: termination
-        meta:
-          name: Done
-          visual: { id: "99", parent: "1", value: null, xywh: [1000, 80, 0, 0] }
-    paths:
-      - { parentid: 10, childid: 20, meta: { visual: { id: "p10_20", parent: "1", value: null, points: [] } } }
-      - parentid: 20
-        childid: 30
-        expr: "record.values.email_opt_out == true && isEmpty(record.values.unsubscribed_at)"
-        meta: { name: Opted out, visual: { id: "p20_30", parent: "1", value: null, points: [] } }
-      - parentid: 20
-        childid: 99
-        expr: ""
-        meta: { name: Otherwise, visual: { id: "p20_99", parent: "1", value: null, points: [] } }
-      - { parentid: 30, childid: 99, meta: { visual: { id: "p30_99", parent: "1", value: null, points: [] } } }
+    paths: []
 
   # ===========================================================================
   # Deal won: promote the primary contact and company to Customer
@@ -676,7 +956,7 @@ workflows:
   crm_campaign_build_recipients:
     meta:
       name: "CRM: Campaign - build recipients"
-      description: Queues one CampaignRecipient per contact matching the campaign audience filter, skipping opted-out contacts and contacts without email.
+      description: Queues one CampaignRecipient per contact in the campaign segment (and optional extra filter), skipping opted-out contacts and contacts without email.
     enabled: true
     trace: false
     keepsessions: 0
@@ -709,13 +989,110 @@ workflows:
         meta:
           name: Not allowed
           visual: { id: "15", parent: "1", value: null, xywh: [200, 280, 0, 0] }
+      - id: 16
+        kind: gateway
+        ref: excl
+        meta:
+          name: Has audience?
+          visual: { id: "16", parent: "1", value: null, xywh: [200, 440, 0, 0] }
+      - id: 18
+        kind: error
+        arguments:
+          - { target: message, type: String, value: "Pick an audience segment (or an extra audience filter) first." }
+        meta:
+          name: No audience
+          visual: { id: "18", parent: "1", value: null, xywh: [200, 640, 0, 0] }
+      - id: 17
+        kind: expressions
+        arguments:
+          - { target: queued, type: Integer, value: "0" }
+          - { target: extra, type: String, expr: 'coalesce(record.values.audience_query, "")' }
+          - { target: base, type: String, value: "" }
+          - { target: ids, type: Array, expr: "[]" }
+        meta:
+          name: Init
+          visual: { id: "17", parent: "1", value: null, xywh: [400, 440, 0, 0] }
+      - id: 19
+        kind: gateway
+        ref: excl
+        meta:
+          name: Uses a segment?
+          visual: { id: "19", parent: "1", value: null, xywh: [600, 440, 0, 0] }
+      - id: 21
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Segment }
+          - { target: record, type: ID, expr: "record.values.segment" }
+        results:
+          - { target: seg, expr: "record" }
+        meta:
+          name: Load segment
+          visual: { id: "21", parent: "1", value: null, xywh: [800, 440, 0, 0] }
+      - id: 22
+        kind: gateway
+        ref: excl
+        meta:
+          name: Static list?
+          visual: { id: "22", parent: "1", value: null, xywh: [1000, 440, 0, 0] }
+      - id: 23
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: SegmentMember }
+          - { target: query, type: String, expr: 'format("segment = %v", seg.ID)' }
+        results:
+          - { target: m, expr: "record" }
+        meta:
+          name: Each saved member
+          visual: { id: "23", parent: "1", value: null, xywh: [1200, 360, 0, 0] }
+      - id: 24
+        kind: expressions
+        arguments:
+          - { target: ids, type: Array, expr: 'push(ids, format("%v", m.values.contact))' }
+        meta:
+          name: Collect contact
+          visual: { id: "24", parent: "1", value: null, xywh: [1400, 280, 0, 0] }
+      - id: 241
+        kind: continue
+        meta:
+          name: Next member
+          visual: { id: "241", parent: "1", value: null, xywh: [1600, 280, 0, 0] }
+      - id: 25
+        kind: gateway
+        ref: excl
+        meta:
+          name: Any members?
+          visual: { id: "25", parent: "1", value: null, xywh: [1400, 440, 0, 0] }
+      - id: 251
+        kind: expressions
+        arguments:
+          - { target: base, type: String, expr: 'format("recordID IN (%s)", join(ids, ","))' }
+        meta:
+          name: Members as filter
+          visual: { id: "251", parent: "1", value: null, xywh: [1600, 440, 0, 0] }
+      - id: 252
+        kind: error
+        arguments:
+          - { target: message, type: String, value: "This static segment has no members yet. Add contacts or take a snapshot first." }
+        meta:
+          name: Empty list
+          visual: { id: "252", parent: "1", value: null, xywh: [1400, 640, 0, 0] }
+      - id: 26
+        kind: expressions
+        arguments:
+          - { target: base, type: String, expr: 'coalesce(seg.values.filter, "")' }
+        meta:
+          name: Segment filter
+          visual: { id: "26", parent: "1", value: null, xywh: [1200, 560, 0, 0] }
       - id: 20
         kind: expressions
         arguments:
-          - { target: count, type: Integer, value: "0" }
-          - { target: audience, type: String, expr: 'coalesce(record.values.audience_query, "")' }
+          - { target: audience, type: String, expr: 'base == "" ? extra : (extra == "" ? base : "(" + base + ") AND (" + extra + ")")' }
         meta:
-          name: Init
+          name: Final audience
           visual: { id: "20", parent: "1", value: null, xywh: [400, 80, 0, 0] }
       - id: 30
         kind: iterator
@@ -759,7 +1136,7 @@ workflows:
           - { target: rcp.values.email, type: Any, expr: "contact.values.email" }
           - { target: rcp.values.status, type: Any, value: Queued }
           - { target: rcp.values.queued_at, type: Any, expr: "now()" }
-          - { target: count, type: Integer, expr: "count + 1" }
+          - { target: queued, type: Integer, expr: "queued + 1" }
         meta:
           name: Fill in recipient
           visual: { id: "51", parent: "1", value: null, xywh: [1200, 0, 0, 0] }
@@ -779,7 +1156,7 @@ workflows:
       - id: 60
         kind: expressions
         arguments:
-          - { target: record.values.recipients_count, type: Any, expr: "count" }
+          - { target: record.values.recipients_count, type: Any, expr: "queued" }
           - { target: record.values.status, type: Any, value: Scheduled }
         meta:
           name: Update campaign
@@ -813,7 +1190,7 @@ workflows:
           - { target: run.values.resource_module, type: Any, value: EmailCampaign }
           - { target: run.values.resource_record_id, type: Any, expr: 'format("%v", record.ID)' }
           - { target: run.values.campaign, type: Any, expr: "record.ID" }
-          - { target: run.values.message, type: Any, expr: 'format("Queued %v recipients", count)' }
+          - { target: run.values.message, type: Any, expr: 'format("Queued %v recipients", queued)' }
         meta:
           name: Describe run
           visual: { id: "71", parent: "1", value: null, xywh: [1400, 200, 0, 0] }
@@ -830,20 +1207,60 @@ workflows:
         ref: notification
         arguments:
           - { target: title, type: String, value: Recipients ready }
-          - { target: message, type: String, expr: 'format("Queued %v recipients. Review the list, then click Send campaign.", count)' }
+          - { target: message, type: String, expr: 'format("Queued %v recipients. Review the list, then click Send campaign.", queued)' }
           - { target: variant, type: String, value: success }
         meta:
           name: Tell the user
           visual: { id: "80", parent: "1", value: null, xywh: [1800, 200, 0, 0] }
     paths:
       - parentid: 10
-        childid: 20
+        childid: 16
         expr: '(record.values.status == "Draft" || record.values.status == "Scheduled") && coalesce(record.values.recipients_count, 0) == 0'
-        meta: { name: Yes, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+        meta: { name: Yes, visual: { id: "p10_16", parent: "1", value: null, points: [] } }
       - parentid: 10
         childid: 15
         expr: ""
         meta: { name: No, visual: { id: "p10_15", parent: "1", value: null, points: [] } }
+      - parentid: 16
+        childid: 17
+        expr: "!isEmpty(record.values.segment) || !isEmpty(record.values.audience_query)"
+        meta: { name: Yes, visual: { id: "p16_17", parent: "1", value: null, points: [] } }
+      - parentid: 16
+        childid: 18
+        expr: ""
+        meta: { name: No, visual: { id: "p16_18", parent: "1", value: null, points: [] } }
+      - { parentid: 17, childid: 19, meta: { visual: { id: "p17_19", parent: "1", value: null, points: [] } } }
+      - parentid: 19
+        childid: 21
+        expr: "!isEmpty(record.values.segment)"
+        meta: { name: Yes, visual: { id: "p19_21", parent: "1", value: null, points: [] } }
+      - parentid: 19
+        childid: 20
+        expr: ""
+        meta: { name: No, visual: { id: "p19_20", parent: "1", value: null, points: [] } }
+      - { parentid: 21, childid: 22, meta: { visual: { id: "p21_22", parent: "1", value: null, points: [] } } }
+      - parentid: 22
+        childid: 23
+        expr: 'seg.values.list_type == "Static"'
+        meta: { name: Static, visual: { id: "p22_23", parent: "1", value: null, points: [] } }
+      - parentid: 22
+        childid: 26
+        expr: ""
+        meta: { name: Active, visual: { id: "p22_26", parent: "1", value: null, points: [] } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 23, childid: 24, meta: { name: Loop, visual: { id: "p23_24", parent: "1", value: null, points: [] } } }
+      - { parentid: 23, childid: 25, meta: { name: Done, visual: { id: "p23_25", parent: "1", value: null, points: [] } } }
+      - { parentid: 24, childid: 241, meta: { visual: { id: "p24_241", parent: "1", value: null, points: [] } } }
+      - parentid: 25
+        childid: 251
+        expr: "length(ids) > 0"
+        meta: { name: Yes, visual: { id: "p25_251", parent: "1", value: null, points: [] } }
+      - parentid: 25
+        childid: 252
+        expr: ""
+        meta: { name: No, visual: { id: "p25_252", parent: "1", value: null, points: [] } }
+      - { parentid: 251, childid: 20, meta: { visual: { id: "p251_20", parent: "1", value: null, points: [] } } }
+      - { parentid: 26, childid: 20, meta: { visual: { id: "p26_20", parent: "1", value: null, points: [] } } }
       - { parentid: 20, childid: 30, meta: { visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
       # iterator: first path is the loop body, second is taken when done
       - { parentid: 30, childid: 40, meta: { name: Loop, visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
@@ -1577,3 +1994,690 @@ workflows:
       - { parentid: 70, childid: 71, meta: { visual: { id: "p70_71", parent: "1", value: null, points: [] } } }
       - { parentid: 71, childid: 72, meta: { visual: { id: "p71_72", parent: "1", value: null, points: [] } } }
       - { parentid: 72, childid: 80, meta: { visual: { id: "p72_80", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Segment: recount members (button on the segment page)
+  crm_segment_refresh:
+    meta:
+      name: "CRM: Segment - refresh count"
+      description: Recounts the contacts in a segment (live filter for Active lists, saved members for Static lists).
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Segment] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Static list?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 20
+        kind: function
+        ref: composeRecordsSearch
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: SegmentMember }
+          - { target: query, type: String, expr: 'format("segment = %v", record.ID)' }
+          - { target: limit, type: UnsignedInteger, value: "1" }
+          - { target: incTotal, type: Boolean, value: "true" }
+        results:
+          - { target: n, expr: "total" }
+        meta:
+          name: Count saved members
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 0, 0, 0] }
+      - id: 30
+        kind: function
+        ref: composeRecordsSearch
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: query, type: String, expr: 'coalesce(record.values.filter, "")' }
+          - { target: limit, type: UnsignedInteger, value: "1" }
+          - { target: incTotal, type: Boolean, value: "true" }
+        results:
+          - { target: n, expr: "total" }
+        meta:
+          name: Count filter matches
+          visual: { id: "30", parent: "1", value: null, xywh: [400, 160, 0, 0] }
+      - id: 40
+        kind: expressions
+        arguments:
+          - { target: record.values.contact_count, type: Any, expr: "n" }
+          - { target: record.values.last_refreshed_at, type: Any, expr: "now()" }
+        meta:
+          name: Store count
+          visual: { id: "40", parent: "1", value: null, xywh: [600, 80, 0, 0] }
+      - id: 45
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "record" }
+        meta:
+          name: Save segment
+          visual: { id: "45", parent: "1", value: null, xywh: [800, 80, 0, 0] }
+      - id: 50
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Segment refreshed }
+          - { target: message, type: String, expr: 'format("%v contacts in this segment.", n)' }
+          - { target: variant, type: String, value: info }
+        meta:
+          name: Tell the user
+          visual: { id: "50", parent: "1", value: null, xywh: [1000, 80, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: 'record.values.list_type == "Static"'
+        meta: { name: Static, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 30
+        expr: ""
+        meta: { name: Active, visual: { id: "p10_30", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 40, meta: { visual: { id: "p20_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 40, meta: { visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 45, meta: { visual: { id: "p40_45", parent: "1", value: null, points: [] } } }
+      - { parentid: 45, childid: 50, meta: { visual: { id: "p45_50", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Segment: add every contact matching the filter to a static list
+  crm_segment_snapshot:
+    meta:
+      name: "CRM: Segment - save snapshot"
+      description: Adds every contact that currently matches the filter to a Static segment (contacts already in the list are skipped).
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Segment] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Static with filter?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 15
+        kind: error
+        arguments:
+          - { target: message, type: String, value: "Snapshots are for Static segments that have a filter. Active segments always show their live matches." }
+        meta:
+          name: Not a static list
+          visual: { id: "15", parent: "1", value: null, xywh: [200, 280, 0, 0] }
+      - id: 20
+        kind: expressions
+        arguments:
+          - { target: added, type: Integer, value: "0" }
+        meta:
+          name: Init
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 30
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: query, type: String, expr: "record.values.filter" }
+        results:
+          - { target: c, expr: "record" }
+        meta:
+          name: Each matching contact
+          visual: { id: "30", parent: "1", value: null, xywh: [600, 80, 0, 0] }
+      - id: 40
+        kind: function
+        ref: composeRecordsSearch
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: SegmentMember }
+          - { target: query, type: String, expr: 'format("segment = %v AND contact = %v", record.ID, c.ID)' }
+          - { target: limit, type: UnsignedInteger, value: "1" }
+          - { target: incTotal, type: Boolean, value: "true" }
+        results:
+          - { target: existing, expr: "total" }
+        meta:
+          name: Already a member?
+          visual: { id: "40", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 45
+        kind: gateway
+        ref: excl
+        meta:
+          name: New member?
+          visual: { id: "45", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 46
+        kind: continue
+        meta:
+          name: Skip
+          visual: { id: "46", parent: "1", value: null, xywh: [1000, -160, 0, 0] }
+      - id: 50
+        kind: function
+        ref: composeRecordsNew
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: SegmentMember }
+        results:
+          - { target: m, expr: "record" }
+        meta:
+          name: New member
+          visual: { id: "50", parent: "1", value: null, xywh: [1200, 0, 0, 0] }
+      - id: 51
+        kind: expressions
+        arguments:
+          - { target: m.values.segment, type: Any, expr: "record.ID" }
+          - { target: m.values.contact, type: Any, expr: "c.ID" }
+          - { target: m.values.source, type: Any, value: Filter snapshot }
+          - { target: m.values.added_at, type: Any, expr: "now()" }
+          - { target: added, type: Integer, expr: "added + 1" }
+        meta:
+          name: Fill in member
+          visual: { id: "51", parent: "1", value: null, xywh: [1400, 0, 0, 0] }
+      - id: 52
+        kind: function
+        ref: composeRecordsCreate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "m" }
+        meta:
+          name: Save member
+          visual: { id: "52", parent: "1", value: null, xywh: [1600, 0, 0, 0] }
+      - id: 53
+        kind: continue
+        meta:
+          name: Next contact
+          visual: { id: "53", parent: "1", value: null, xywh: [1800, 0, 0, 0] }
+      - id: 70
+        kind: function
+        ref: composeRecordsSearch
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: SegmentMember }
+          - { target: query, type: String, expr: 'format("segment = %v", record.ID)' }
+          - { target: limit, type: UnsignedInteger, value: "1" }
+          - { target: incTotal, type: Boolean, value: "true" }
+        results:
+          - { target: n, expr: "total" }
+        meta:
+          name: Count members
+          visual: { id: "70", parent: "1", value: null, xywh: [800, 240, 0, 0] }
+      - id: 71
+        kind: expressions
+        arguments:
+          - { target: record.values.contact_count, type: Any, expr: "n" }
+          - { target: record.values.last_refreshed_at, type: Any, expr: "now()" }
+        meta:
+          name: Store count
+          visual: { id: "71", parent: "1", value: null, xywh: [1000, 240, 0, 0] }
+      - id: 72
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "record" }
+        meta:
+          name: Save segment
+          visual: { id: "72", parent: "1", value: null, xywh: [1200, 240, 0, 0] }
+      - id: 73
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Snapshot saved }
+          - { target: message, type: String, expr: 'format("Added %v contacts; the list now has %v.", added, n)' }
+          - { target: variant, type: String, value: success }
+        meta:
+          name: Tell the user
+          visual: { id: "73", parent: "1", value: null, xywh: [1400, 240, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: 'record.values.list_type == "Static" && !isEmpty(record.values.filter)'
+        meta: { name: Yes, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 15
+        expr: ""
+        meta: { name: No, visual: { id: "p10_15", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 30, meta: { visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 30, childid: 40, meta: { name: Loop, visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 70, meta: { name: Done, visual: { id: "p30_70", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 45, meta: { visual: { id: "p40_45", parent: "1", value: null, points: [] } } }
+      - parentid: 45
+        childid: 50
+        expr: "existing == 0"
+        meta: { name: Yes, visual: { id: "p45_50", parent: "1", value: null, points: [] } }
+      - parentid: 45
+        childid: 46
+        expr: ""
+        meta: { name: No, visual: { id: "p45_46", parent: "1", value: null, points: [] } }
+      - { parentid: 50, childid: 51, meta: { visual: { id: "p50_51", parent: "1", value: null, points: [] } } }
+      - { parentid: 51, childid: 52, meta: { visual: { id: "p51_52", parent: "1", value: null, points: [] } } }
+      - { parentid: 52, childid: 53, meta: { visual: { id: "p52_53", parent: "1", value: null, points: [] } } }
+      - { parentid: 70, childid: 71, meta: { visual: { id: "p70_71", parent: "1", value: null, points: [] } } }
+      - { parentid: 71, childid: 72, meta: { visual: { id: "p71_72", parent: "1", value: null, points: [] } } }
+      - { parentid: 72, childid: 73, meta: { visual: { id: "p72_73", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Contact rollup: deal counts and values, for segmentation
+  crm_contact_deal_rollup:
+    meta:
+      name: "CRM: Contact deal stats"
+      description: Recalculates deals, open deals, won deals, open pipeline and won revenue on the contact whenever one of their deals changes.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: afterCreate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 0, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+      - resourceType: compose:record
+        eventType: afterUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t2"
+            parent: "1"
+            xywh: [0, 160, 0, 0]
+            edges:
+              - { parentID: "t2", childID: "10", meta: { visual: { id: "et2", parent: "1", value: null, points: [] } } }
+      - resourceType: compose:record
+        eventType: afterDelete
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t3"
+            parent: "1"
+            xywh: [0, 320, 0, 0]
+            edges:
+              - { parentID: "t3", childID: "10", meta: { visual: { id: "et3", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Has contact?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 160, 0, 0] }
+      - id: 20
+        kind: expressions
+        arguments:
+          - { target: cid, type: Any, expr: "record.values.contact" }
+          - { target: deals, type: Integer, value: "0" }
+          - { target: open, type: Integer, value: "0" }
+          - { target: won, type: Integer, value: "0" }
+          - { target: pipe, type: Float, value: "0" }
+          - { target: rev, type: Float, value: "0" }
+        meta:
+          name: Init
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 160, 0, 0] }
+      - id: 30
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Deal }
+          - { target: query, type: String, expr: 'format("contact = %v", cid)' }
+        results:
+          - { target: d, expr: "record" }
+        meta:
+          name: Each deal of contact
+          visual: { id: "30", parent: "1", value: null, xywh: [600, 160, 0, 0] }
+      - id: 40
+        kind: expressions
+        arguments:
+          - { target: isOpen, type: Boolean, expr: 'd.values.stage != "Won" && d.values.stage != "Lost"' }
+          - { target: deals, type: Integer, expr: "deals + 1" }
+          - { target: open, type: Integer, expr: "open + (isOpen ? 1 : 0)" }
+          - { target: won, type: Integer, expr: 'won + (d.values.stage == "Won" ? 1 : 0)' }
+          - { target: pipe, type: Float, expr: "pipe + (isOpen ? float(coalesce(d.values.amount, 0)) : 0)" }
+          - { target: rev, type: Float, expr: 'rev + (d.values.stage == "Won" ? float(coalesce(d.values.amount, 0)) : 0)' }
+        meta:
+          name: Add up
+          visual: { id: "40", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 41
+        kind: continue
+        meta:
+          name: Next deal
+          visual: { id: "41", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 50
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: record, type: ID, expr: "cid" }
+        results:
+          - { target: c, expr: "record" }
+        meta:
+          name: Load contact
+          visual: { id: "50", parent: "1", value: null, xywh: [800, 320, 0, 0] }
+      - id: 51
+        kind: expressions
+        arguments:
+          - { target: c.values.deals_count, type: Any, expr: "deals" }
+          - { target: c.values.open_deals_count, type: Any, expr: "open" }
+          - { target: c.values.won_deals_count, type: Any, expr: "won" }
+          - { target: c.values.open_pipeline, type: Any, expr: "pipe" }
+          - { target: c.values.won_revenue, type: Any, expr: "rev" }
+        meta:
+          name: Store stats
+          visual: { id: "51", parent: "1", value: null, xywh: [1000, 320, 0, 0] }
+      - id: 52
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "c" }
+        meta:
+          name: Save contact
+          visual: { id: "52", parent: "1", value: null, xywh: [1200, 320, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [1400, 160, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: "!isEmpty(record.values.contact)"
+        meta: { name: Yes, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 99
+        expr: ""
+        meta: { name: No, visual: { id: "p10_99", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 30, meta: { visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 30, childid: 40, meta: { name: Loop, visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 50, meta: { name: Done, visual: { id: "p30_50", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 41, meta: { visual: { id: "p40_41", parent: "1", value: null, points: [] } } }
+      - { parentid: 50, childid: 51, meta: { visual: { id: "p50_51", parent: "1", value: null, points: [] } } }
+      - { parentid: 51, childid: 52, meta: { visual: { id: "p51_52", parent: "1", value: null, points: [] } } }
+      - { parentid: 52, childid: 99, meta: { visual: { id: "p52_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Contact rollup: marketing email engagement, for segmentation
+  crm_contact_email_rollup:
+    meta:
+      name: "CRM: Contact email stats"
+      description: Recalculates marketing emails sent, opened and clicked, and the last open and click time, on the recipient's contact.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: afterUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [CampaignRecipient] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 160, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Status changed?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 160, 0, 0] }
+      - id: 20
+        kind: expressions
+        arguments:
+          - { target: cid, type: Any, expr: "record.values.contact" }
+          - { target: sent, type: Integer, value: "0" }
+          - { target: opened, type: Integer, value: "0" }
+          - { target: clicked, type: Integer, value: "0" }
+          - { target: lastOpen, type: DateTime, value: "1970-01-01T00:00:00Z" }
+          - { target: lastClick, type: DateTime, value: "1970-01-01T00:00:00Z" }
+        meta:
+          name: Init
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 160, 0, 0] }
+      - id: 30
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: CampaignRecipient }
+          - { target: query, type: String, expr: 'format("contact = %v", cid)' }
+        results:
+          - { target: r, expr: "record" }
+        meta:
+          name: Each email to contact
+          visual: { id: "30", parent: "1", value: null, xywh: [600, 160, 0, 0] }
+      - id: 40
+        kind: expressions
+        arguments:
+          - { target: sent, type: Integer, expr: "sent + (isEmpty(r.values.sent_at) ? 0 : 1)" }
+          - { target: opened, type: Integer, expr: "opened + (isEmpty(r.values.opened_at) ? 0 : 1)" }
+          - { target: clicked, type: Integer, expr: "clicked + (isEmpty(r.values.clicked_at) ? 0 : 1)" }
+          - { target: lastOpen, type: DateTime, expr: "isEmpty(r.values.opened_at) ? lastOpen : latest(lastOpen, r.values.opened_at)" }
+          - { target: lastClick, type: DateTime, expr: "isEmpty(r.values.clicked_at) ? lastClick : latest(lastClick, r.values.clicked_at)" }
+        meta:
+          name: Add up
+          visual: { id: "40", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 41
+        kind: continue
+        meta:
+          name: Next email
+          visual: { id: "41", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 50
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: record, type: ID, expr: "cid" }
+        results:
+          - { target: c, expr: "record" }
+        meta:
+          name: Load contact
+          visual: { id: "50", parent: "1", value: null, xywh: [800, 320, 0, 0] }
+      - id: 51
+        kind: expressions
+        arguments:
+          - { target: c.values.emails_sent_count, type: Any, expr: "sent" }
+          - { target: c.values.emails_opened_count, type: Any, expr: "opened" }
+          - { target: c.values.emails_clicked_count, type: Any, expr: "clicked" }
+        meta:
+          name: Store counts
+          visual: { id: "51", parent: "1", value: null, xywh: [1000, 320, 0, 0] }
+      - id: 52
+        kind: gateway
+        ref: excl
+        meta:
+          name: Ever opened?
+          visual: { id: "52", parent: "1", value: null, xywh: [1200, 320, 0, 0] }
+      - id: 53
+        kind: expressions
+        arguments:
+          - { target: c.values.last_email_opened_at, type: Any, expr: "lastOpen" }
+        meta:
+          name: Last open
+          visual: { id: "53", parent: "1", value: null, xywh: [1400, 240, 0, 0] }
+      - id: 54
+        kind: gateway
+        ref: excl
+        meta:
+          name: Ever clicked?
+          visual: { id: "54", parent: "1", value: null, xywh: [1600, 320, 0, 0] }
+      - id: 55
+        kind: expressions
+        arguments:
+          - { target: c.values.last_email_clicked_at, type: Any, expr: "lastClick" }
+        meta:
+          name: Last click
+          visual: { id: "55", parent: "1", value: null, xywh: [1800, 240, 0, 0] }
+      - id: 56
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "c" }
+        meta:
+          name: Save contact
+          visual: { id: "56", parent: "1", value: null, xywh: [2000, 320, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [2200, 160, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: "record.values.status != oldRecord.values.status && !isEmpty(record.values.contact)"
+        meta: { name: Yes, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 99
+        expr: ""
+        meta: { name: No, visual: { id: "p10_99", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 30, meta: { visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 30, childid: 40, meta: { name: Loop, visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 50, meta: { name: Done, visual: { id: "p30_50", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 41, meta: { visual: { id: "p40_41", parent: "1", value: null, points: [] } } }
+      - { parentid: 50, childid: 51, meta: { visual: { id: "p50_51", parent: "1", value: null, points: [] } } }
+      - { parentid: 51, childid: 52, meta: { visual: { id: "p51_52", parent: "1", value: null, points: [] } } }
+      - parentid: 52
+        childid: 53
+        expr: "opened > 0"
+        meta: { name: Yes, visual: { id: "p52_53", parent: "1", value: null, points: [] } }
+      - parentid: 52
+        childid: 54
+        expr: ""
+        meta: { name: No, visual: { id: "p52_54", parent: "1", value: null, points: [] } }
+      - { parentid: 53, childid: 54, meta: { visual: { id: "p53_54", parent: "1", value: null, points: [] } } }
+      - parentid: 54
+        childid: 55
+        expr: "clicked > 0"
+        meta: { name: Yes, visual: { id: "p54_55", parent: "1", value: null, points: [] } }
+      - parentid: 54
+        childid: 56
+        expr: ""
+        meta: { name: No, visual: { id: "p54_56", parent: "1", value: null, points: [] } }
+      - { parentid: 55, childid: 56, meta: { visual: { id: "p55_56", parent: "1", value: null, points: [] } } }
+      - { parentid: 56, childid: 99, meta: { visual: { id: "p56_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Setup: re-save every contact so the email intelligence fills in names,
+  # email domains and companies on contacts created before it existed
+  crm_contacts_enrich_existing:
+    meta:
+      name: "CRM: Setup - enrich existing contacts"
+      description: Re-saves every contact so names, email domain and company are filled from the email address where they are empty.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:namespace
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: expressions
+        arguments:
+          - { target: n, type: Integer, value: "0" }
+        meta:
+          name: Init
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 20
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+        results:
+          - { target: c, expr: "record" }
+        meta:
+          name: Each contact
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 30
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "c" }
+        meta:
+          name: Re-save (runs email intelligence)
+          visual: { id: "30", parent: "1", value: null, xywh: [600, 0, 0, 0] }
+      - id: 31
+        kind: expressions
+        arguments:
+          - { target: n, type: Integer, expr: "n + 1" }
+        meta:
+          name: Count
+          visual: { id: "31", parent: "1", value: null, xywh: [800, 0, 0, 0] }
+      - id: 32
+        kind: continue
+        meta:
+          name: Next contact
+          visual: { id: "32", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 40
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Contacts enriched }
+          - { target: message, type: String, expr: 'format("Processed %v contacts.", n)' }
+          - { target: variant, type: String, value: success }
+        meta:
+          name: Tell the user
+          visual: { id: "40", parent: "1", value: null, xywh: [600, 200, 0, 0] }
+    paths:
+      - { parentid: 10, childid: 20, meta: { visual: { id: "p10_20", parent: "1", value: null, points: [] } } }
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 20, childid: 30, meta: { name: Loop, visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
+      - { parentid: 20, childid: 40, meta: { name: Done, visual: { id: "p20_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 31, meta: { visual: { id: "p30_31", parent: "1", value: null, points: [] } } }
+      - { parentid: 31, childid: 32, meta: { visual: { id: "p31_32", parent: "1", value: null, points: [] } } }

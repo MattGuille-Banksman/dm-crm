@@ -30,6 +30,9 @@ modules:
         kind: Url
         options:
           outputPlain: false
+      domain:
+        label: Email domain
+        kind: String
       industry:
         label: Industry
         kind: Select
@@ -200,6 +203,58 @@ modules:
         kind: DateTime
       last_activity_at:
         label: Last activity
+        kind: DateTime
+        options:
+          outputRelative: true
+      email_domain:
+        label: Email domain
+        kind: String
+      city:
+        label: City
+        kind: String
+      country:
+        label: Country
+        kind: String
+      # Rollups maintained by workflows, for segmentation
+      deals_count:
+        label: Deals
+        kind: Number
+        options: { precision: 0 }
+      open_deals_count:
+        label: Open deals
+        kind: Number
+        options: { precision: 0 }
+      won_deals_count:
+        label: Won deals
+        kind: Number
+        options: { precision: 0 }
+      open_pipeline:
+        label: Open pipeline value
+        kind: Number
+        options: { prefix: "$", precision: 0 }
+      won_revenue:
+        label: Won revenue
+        kind: Number
+        options: { prefix: "$", precision: 0 }
+      emails_sent_count:
+        label: Marketing emails sent
+        kind: Number
+        options: { precision: 0 }
+      emails_opened_count:
+        label: Marketing emails opened
+        kind: Number
+        options: { precision: 0 }
+      emails_clicked_count:
+        label: Marketing emails clicked
+        kind: Number
+        options: { precision: 0 }
+      last_email_opened_at:
+        label: Last email opened
+        kind: DateTime
+        options:
+          outputRelative: true
+      last_email_clicked_at:
+        label: Last email clicked
         kind: DateTime
         options:
           outputRelative: true
@@ -560,12 +615,16 @@ modules:
         label: Preview text
         kind: String
       body_html:
-        label: HTML body
+        label: HTML code (paste your email HTML here)
         kind: String
         options:
           multiLine: true
-          useRichTextEditor: true
+          useRichTextEditor: false
           sanitizeXSS: false
+      # data: URL rendered by the preview frame, built from body_html on save
+      preview_url:
+        label: Preview URL
+        kind: String
       body_text:
         label: Plain-text body
         kind: String
@@ -616,10 +675,16 @@ modules:
       reply_to:
         label: Reply-to
         kind: Email
+      segment:
+        label: Audience segment
+        kind: Record
+        options:
+          module: Segment
+          labelField: name
+          queryFields: [name]
       audience_query:
-        label: Audience filter (Contact query)
+        label: Extra audience filter (advanced, optional)
         kind: String
-        defaultValue: "lifecycle_stage = 'Lead'"
       scheduled_at:
         label: Scheduled for
         kind: DateTime
@@ -736,6 +801,95 @@ modules:
         kind: String
 
   # ---------------------------------------------------------------------------
+  # Contact lists, HubSpot style.
+  #   Active: membership is the live result of the filter (Contact record query)
+  #   Static: a snapshot of members saved in SegmentMember; add/remove by hand
+  Segment:
+    name: Segment
+    fields:
+      name:
+        label: Segment name
+        kind: String
+        required: true
+      list_type:
+        label: List type
+        kind: Select
+        required: true
+        defaultValue: Active
+        options:
+          displayType: badge
+          options:
+            - { value: Active, text: "Active (updates automatically)" }
+            - { value: Static, text: "Static (fixed snapshot)" }
+      filter:
+        label: Filter
+        kind: String
+        options:
+          multiLine: true
+      category:
+        label: Folder
+        kind: Select
+        options:
+          options:
+            - { value: Marketing, text: Marketing }
+            - { value: Sales, text: Sales }
+            - { value: Customers, text: Customers }
+            - { value: Re-engagement, text: Re-engagement }
+            - { value: Other, text: Other }
+      description:
+        label: Description
+        kind: String
+        options:
+          multiLine: true
+      contact_count:
+        label: Contacts
+        kind: Number
+        options: { precision: 0 }
+      last_refreshed_at:
+        label: Last refreshed
+        kind: DateTime
+        options:
+          outputRelative: true
+      owner:
+        label: Owner
+        kind: User
+        options:
+          presetWithAuthenticated: true
+
+  # ---------------------------------------------------------------------------
+  SegmentMember:
+    name: Segment member
+    fields:
+      segment:
+        label: Segment
+        kind: Record
+        required: true
+        options:
+          module: Segment
+          labelField: name
+          queryFields: [name]
+      contact:
+        label: Contact
+        kind: Record
+        required: true
+        options:
+          module: Contact
+          labelField: full_name
+          queryFields: [full_name, email]
+      source:
+        label: Added by
+        kind: Select
+        defaultValue: Manual
+        options:
+          options:
+            - { value: Filter snapshot, text: Filter snapshot }
+            - { value: Manual, text: Manual }
+            - { value: Import, text: Import }
+      added_at:
+        label: Added at
+        kind: DateTime
+
+  # ---------------------------------------------------------------------------
   AutomationRun:
     name: Automation run
     fields:
@@ -781,6 +935,12 @@ modules:
         kind: Record
         options:
           module: EmailCampaign
+          labelField: name
+      segment:
+        label: Segment
+        kind: Record
+        options:
+          module: Segment
           labelField: name
       message:
         label: Message
