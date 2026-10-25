@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>DM-CRM Brand</title>
+<style>
+  :root {
+    --midnight: #0B1026; --indigo: #4F46E5; --teal: #14B8A6; --violet: #A21CAF;
+    --surface: #F5F7FB; --border: #E2E8F0; --muted: #64748B;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--surface); color: var(--midnight); font-family: Poppins, "Segoe UI", Arial, sans-serif; }
+  main { max-width: 960px; margin: 0 auto; padding: 32px 16px 48px; }
+  h1 { margin: 0 0 4px; font-size: 28px; }
+  p.lead { margin: 0 0 28px; color: var(--muted); }
+  h2 { font-size: 16px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 32px 0 12px; }
+  .row { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  .tile { border: 1px solid var(--border); border-radius: 12px; padding: 28px 20px; display: flex; flex-direction: column; align-items: center; gap: 12px; background: #fff; }
+  .tile.dark { background: var(--midnight); border-color: var(--midnight); color: #CBD5E1; }
+  .tile img { max-width: 100%; height: 64px; }
+  .tile small { font-size: 12px; color: inherit; opacity: .75; }
+  .swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; }
+  .sw { border-radius: 12px; overflow: hidden; border: 1px solid var(--border); background: #fff; }
+  .sw .chip { height: 72px; }
+  .sw .meta { padding: 10px 12px; font-size: 13px; }
+  .sw .meta b { display: block; font-size: 14px; }
+  .sw .meta code { font-size: 13px; }
+  .gradient { height: 48px; border-radius: 12px; background: linear-gradient(90deg, #4F46E5, #14B8A6); }
+  .ui { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 20px; }
+  .btn { border: 0; border-radius: 8px; padding: 10px 18px; font: inherit; font-weight: 600; color: #fff; }
+  .badge { border-radius: 999px; padding: 4px 12px; font-size: 13px; font-weight: 600; }
+</style>
+</head>
+<body>
+<main>
+  <h1>DM-CRM brand</h1>
+  <p class="lead">A sister brand to DM.AI 4U: same hexagon family, three stages rising like a sales pipeline, in indigo to teal with a violet link to the parent brand.</p>
+
+  <h2>Logo</h2>
+  <div class="row">
+    <div class="tile">
+      <svg viewBox="0 0 236 64" height="64" role="img" aria-label="DM-CRM logo on light">
+        <defs>
+          <linearGradient id="l-g" x1="4" y1="60" x2="62" y2="4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#14B8A6"/></linearGradient>
+          <linearGradient id="l-t" x1="128" y1="0" x2="230" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#14B8A6"/></linearGradient>
+        </defs>
+        <path d="M12 50 L30 34 L50 16" fill="none" stroke="url(#l-g)" stroke-width="3" stroke-linecap="round"/>
+        <polygon points="12,42 18.93,46 18.93,54 12,58 5.07,54 5.07,46" fill="#A21CAF"/>
+        <polygon points="30,24 38.66,29 38.66,39 30,44 21.34,39 21.34,29" fill="url(#l-g)" opacity="0.85"/>
+        <polygon points="50,4 60.39,10 60.39,22 50,28 39.61,22 39.61,10" fill="url(#l-g)"/>
+        <text x="76" y="44" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="1"><tspan fill="#0B1026">DM</tspan><tspan fill="#A21CAF">-</tspan><tspan fill="url(#l-t)">CRM</tspan></text>
+      </svg>
+      <small>dm-crm-logo.svg (light backgrounds)</small>
+    </div>
+    <div class="tile dark">
+      <svg viewBox="0 0 236 64" height="64" role="img" aria-label="DM-CRM logo on dark">
+        <defs>
+          <linearGradient id="d-g" x1="4" y1="60" x2="62" y2="4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#6366F1"/><stop offset="1" stop-color="#2DD4BF"/></linearGradient>
+          <linearGradient id="d-t" x1="128" y1="0" x2="230" y2="0" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#818CF8"/><stop offset="1" stop-color="#2DD4BF"/></linearGradient>
+        </defs>
+        <path d="M12 50 L30 34 L50 16" fill="none" stroke="url(#d-g)" stroke-width="3" stroke-linecap="round"/>
+        <polygon points="12,42 18.93,46 18.93,54 12,58 5.07,54 5.07,46" fill="#C026D3"/>
+        <polygon points="30,24 38.66,29 38.66,39 30,44 21.34,39 21.34,29" fill="url(#d-g)" opacity="0.85"/>
+        <polygon points="50,4 60.39,10 60.39,22 50,28 39.61,22 39.61,10" fill="url(#d-g)"/>
+        <text x="76" y="44" font-family="Poppins, 'Segoe UI', Arial, sans-serif" font-size="32" font-weight="700" letter-spacing="1"><tspan fill="#FFFFFF">DM</tspan><tspan fill="#C026D3">-</tspan><tspan fill="url(#d-t)">CRM</tspan></text>
+      </svg>
+      <small>dm-crm-logo-dark.svg (dark backgrounds)</small>
+    </div>
+    <div class="tile">
+      <svg viewBox="0 0 64 64" height="64" role="img" aria-label="DM-CRM icon">
+        <defs>
+          <linearGradient id="i-g" x1="4" y1="60" x2="62" y2="4" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#4F46E5"/><stop offset="1" stop-color="#14B8A6"/></linearGradient>
+        </defs>
+        <path d="M12 50 L30 34 L50 16" fill="none" stroke="url(#i-g)" stroke-width="3" stroke-linecap="round"/>
+        <polygon points="12,42 18.93,46 18.93,54 12,58 5.07,54 5.07,46" fill="#A21CAF"/>
+        <polygon points="30,24 38.66,29 38.66,39 30,44 21.34,39 21.34,29" fill="url(#i-g)" opacity="0.85"/>
+        <polygon points="50,4 60.39,10 60.39,22 50,28 39.61,22 39.61,10" fill="url(#i-g)"/>
+      </svg>
+      <small>dm-crm-icon.svg (app icon, favicon)</small>
+    </div>
+  </div>
+
+  <h2>Colours</h2>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#4F46E5"></div><div class="meta"><b>Pipeline Indigo</b><code>#4F46E5</code><br>Primary: buttons, links</div></div>
+    <div class="sw"><div class="chip" style="background:#14B8A6"></div><div class="meta"><b>Growth Teal</b><code>#14B8A6</code><br>Secondary: highlights, charts</div></div>
+    <div class="sw"><div class="chip" style="background:#A21CAF"></div><div class="meta"><b>DM Violet</b><code>#A21CAF</code><br>Accent: parent-brand link</div></div>
+    <div class="sw"><div class="chip" style="background:#0B1026"></div><div class="meta"><b>Midnight</b><code>#0B1026</code><br>Text, dark backgrounds</div></div>
+    <div class="sw"><div class="chip" style="background:#F5F7FB"></div><div class="meta"><b>Cloud</b><code>#F5F7FB</code><br>Page background</div></div>
+    <div class="sw"><div class="chip" style="background:#64748B"></div><div class="meta"><b>Slate</b><code>#64748B</code><br>Secondary text</div></div>
+  </div>
+
+  <h2>Status colours</h2>
+  <div class="swatches">
+    <div class="sw"><div class="chip" style="background:#16A34A"></div><div class="meta"><b>Won / success</b><code>#16A34A</code></div></div>
+    <div class="sw"><div class="chip" style="background:#F59E0B"></div><div class="meta"><b>Warning</b><code>#F59E0B</code></div></div>
+    <div class="sw"><div class="chip" style="background:#DC2626"></div><div class="meta"><b>Lost / danger</b><code>#DC2626</code></div></div>
+  </div>
+
+  <h2>Signature gradient</h2>
+  <div class="gradient"></div>
+
+  <h2>In use</h2>
+  <div class="ui">
+    <button class="btn" style="background:#4F46E5">Save deal</button>
+    <button class="btn" style="background:#14B8A6">Send campaign</button>
+    <span class="badge" style="background:#E0E7FF;color:#3730A3">Qualified</span>
+    <span class="badge" style="background:#CCFBF1;color:#115E59">Customer</span>
+    <span class="badge" style="background:#DCFCE7;color:#166534">Won</span>
+    <span class="badge" style="background:#FEE2E2;color:#991B1B">Lost</span>
+  </div>
+</main>
+</body>
+</html>
