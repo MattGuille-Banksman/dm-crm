@@ -16,7 +16,7 @@ Source: [`server/provision/750_crm/`](../../provision/750_crm)
 | `1200_charts.yaml` | 15 report charts |
 | `1400_pages.yaml` | Navigation, list/record pages, pipeline board, dashboards |
 | `1600_workflows.yaml` | 18 automation flows |
-| `1700_settings.yaml` | DM-CRM branding, login page styles, column-resize code snippet |
+| `1700_settings.yaml` | DM-CRM logos and login page style (themes and the column-resize snippet: `branding/tools/apply-branding-settings.sh`) |
 
 ## Install
 
@@ -234,7 +234,13 @@ already has it. Corteza's importer has three problems:
 - it re-creates workflow triggers on every import (duplicate triggers run
   workflows several times);
 - it doesn't see disabled workflows, so importing one again fails as a
-  duplicate.
+  duplicate;
+- it overwrites existing *settings* even with `--skip-existing`, and turns
+  list values (themes, code snippets) into empty lists. `1700_settings.yaml`
+  therefore only holds plain values; the colour themes and the column-resize
+  snippet are set by `branding/tools/apply-branding-settings.sh`. Run it once
+  on a fresh install too; it only fills settings that are empty, so pass
+  `--force` to reset them to the DM-CRM defaults.
 
 Use the update script instead. Take a backup first:
 

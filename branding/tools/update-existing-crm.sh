@@ -52,6 +52,9 @@ echo "== 2/4 import package"
 export EXISTING_WORKFLOWS
 EXISTING_WORKFLOWS=$(q "select coalesce(string_agg(handle, ' '), '') from automation_workflows where handle like 'crm_%' and deleted_at is null;")
 bash "$TOOLS/prepare-crm-update.sh" server/provision/750_crm "$WORK/pkg" "$REPLACE_PAGES" "$REPLACE_WORKFLOWS"
+# the importer overwrites existing settings even with --skip-existing (and
+# empties list values), so settings never go through the import
+rm -f "$WORK/pkg/1700_settings.yaml"
 
 echo "== 3/4 import"
 list=$(printf "'%s'," $REPLACE_WORKFLOWS); list=${list%,}
@@ -62,7 +65,11 @@ DEST="/tmp/crm-update-$(date +%Y%m%d%H%M%S)-$$"
 docker cp "$(win "$WORK/pkg")" "$CONTAINER:$DEST"
 docker exec "$CONTAINER" corteza-server import --skip-existing "$DEST" 2>&1 | grep -v '"level":"warn"' || true
 
-echo "== 4/4 restart"
+echo "== 4/4 branding settings and restart"
+if [ "$DB" = corteza ]; then
+  # settings are written through the main compose service
+  bash "$TOOLS/apply-branding-settings.sh"
+fi
 docker restart "$CONTAINER" > /dev/null
 wait_healthy
 rm -f "$WORK/token"

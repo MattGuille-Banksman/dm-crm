@@ -1,28 +1,20 @@
-# DM-CRM branding and UI add-ons
+# DM-CRM branding
 #
 # The files referenced here are served from /branding (the repo's branding/
 # folder, mounted into the web app directory by docker-compose.yml).
-# Existing values are kept on import; change them in Admin Area > User
-# interface > Theming afterwards if you like.
+#
+# Only plain values can go here: the settings importer turns a list of
+# objects into an empty list, so the colour themes (ui.studio.themes) and the
+# column-resize code snippet (code-snippets) are set by
+# branding/tools/apply-branding-settings.sh instead.
+#
+# The importer also overwrites existing settings even with --skip-existing,
+# which is why branding/tools/update-existing-crm.sh leaves this file out.
 
 settings:
   ui.main-logo: /branding/dm-crm-logo.svg
   ui.icon-logo: /branding/dm-crm-icon.svg
 
-  ui.studio.themes:
-    - id: light
-      title: Light
-      values: '{"black":"#0B1026","white":"#FFFFFF","primary":"#4F46E5","secondary":"#64748B","success":"#16A34A","warning":"#F59E0B","danger":"#DC2626","light":"#F5F7FB","extra-light":"#E2E8F0","body-bg":"#F5F7FB","sidebar-bg":"#FFFFFF","topbar-bg":"#F5F7FB"}'
-    - id: dark
-      title: Dark
-      values: '{"black":"#F1F5F9","white":"#0B1026","primary":"#6366F1","secondary":"#94A3B8","success":"#22C55E","warning":"#FBBF24","danger":"#EF4444","light":"#1E2440","extra-light":"#2C3354","body-bg":"#0B1026","sidebar-bg":"#111735","topbar-bg":"#0B1026"}'
-
   # Login page background (auth.ui.background-image-src only accepts
   # uploaded attachments, so the image is set through the styles instead)
   auth.ui.styles: "{ background: url('/branding/dm-crm-login-bg.svg') center / cover no-repeat; }"
-
-  # Drag-to-resize columns on record lists (branding/column-resize.js)
-  code-snippets:
-    - name: DM-CRM column resize
-      script: '<script src="/branding/column-resize.js"></script>'
-      enabled: true
