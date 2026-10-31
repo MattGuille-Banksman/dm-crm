@@ -8,6 +8,7 @@
     }"
   >
     <grid-layout
+      ref="gridLayout"
       :key="gridKey"
       :layout.sync="layout"
       :col-num="48"
@@ -101,6 +102,10 @@ export default {
       layout: [],
 
       resizing: false,
+
+      // DM-CRM: how often each block has been grown since the last layout
+      // reset (caps the auto-fit so it can never loop)
+      autoFitGrows: {},
     }
   },
 
@@ -143,14 +148,24 @@ export default {
         }).filter(b => b)
 
         this.$set(this, 'layout', layout)
+        this.autoFitGrows = {}
         this.$nextTick(() => {
           this.forceRerender()
+          this.watchContent()
         })
       },
     },
   },
 
+  mounted () {
+    window.addEventListener('resize', this.onWindowResize)
+    this.watchContent()
+  },
+
   beforeDestroy () {
+    window.removeEventListener('resize', this.onWindowResize)
+    if (this.contentObserver) this.contentObserver.disconnect()
+    clearTimeout(this.autoFitTimer)
     this.setDefaultValues()
   },
 
@@ -185,6 +200,76 @@ export default {
     forceRerender () {
       // Force the grid layout to recalculate its dimensions
       window.dispatchEvent(new Event('resize'))
+    },
+
+    // DM-CRM: on viewed pages, blocks grow to fit their content instead of
+    // showing a scrollbar; the blocks below move down (vertical compact).
+    // The page builder keeps the stored sizes.
+    watchContent () {
+      if (this.contentObserver) this.contentObserver.disconnect()
+      if (this.editable || !this.$el || typeof MutationObserver === 'undefined') return
+
+      // content arrives after the layout (records load, lists render)
+      this.contentObserver = new MutationObserver(() => this.scheduleAutoFit())
+      this.contentObserver.observe(this.$el, { childList: true, subtree: true, characterData: true })
+      this.scheduleAutoFit()
+    },
+
+    onWindowResize () {
+      // the grid may rebuild the layout for the new width
+      this.autoFitGrows = {}
+      this.scheduleAutoFit()
+    },
+
+    scheduleAutoFit () {
+      clearTimeout(this.autoFitTimer)
+      this.autoFitTimer = setTimeout(this.autoFit, 200)
+    },
+
+    autoFit () {
+      if (this.editable || this.isStretchable) return
+
+      const layout = this.layout.map(l => ({ ...l }))
+      let changed = false
+
+      for (const item of (this.$refs.items || [])) {
+        const overflow = item && item.$el ? this.contentOverflow(item.$el) : 0
+        const grows = this.autoFitGrows[item.i] || 0
+        const entry = layout.find(({ i }) => i === item.i)
+        if (overflow <= 2 || grows >= 8 || !entry) continue
+
+        // grid rows are 10px high with no margin
+        entry.h += Math.ceil(overflow / 10)
+        this.autoFitGrows[item.i] = grows + 1
+        changed = true
+      }
+
+      if (changed) {
+        // the responsive grid rebuilds the layout from its per-breakpoint
+        // cache whenever the width changes, so the cache gets the new
+        // heights too
+        const { layouts = {}, lastBreakpoint } = this.$refs.gridLayout || {}
+        for (const cached of layouts[lastBreakpoint] || []) {
+          const entry = layout.find(({ i }) => i === cached.i)
+          if (entry) cached.h = entry.h
+        }
+
+        this.layout = layout
+      }
+    },
+
+    // largest amount of hidden content in any vertically scrolling area
+    contentOverflow (el) {
+      let max = 0
+      for (const node of el.getElementsByTagName('*')) {
+        const hidden = node.scrollHeight - node.clientHeight
+        if (hidden <= max || !node.clientHeight) continue
+        if (node.closest('.modal, .dropdown-menu, .vs__dropdown-menu, textarea, select')) continue
+
+        const { overflowY } = window.getComputedStyle(node)
+        if (overflowY === 'auto' || overflowY === 'scroll') max = hidden
+      }
+      return max
     },
   },
 }

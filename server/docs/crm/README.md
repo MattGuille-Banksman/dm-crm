@@ -181,6 +181,11 @@ Company email domains are filled from the website automatically
 (`crm_company_defaults`). For contacts that existed before, use **Settings >
 Enrich existing contacts from email**.
 
+Contacts imported from CSV skip record workflows, so `crm_contacts_tidy_imports`
+runs every 5 minutes (as the admin, `run_as`) and re-saves contacts that have
+an email but no email domain yet. Imported contacts are therefore named,
+linked to their company and given an owner within a few minutes.
+
 ## HTML email templates
 
 The template's **HTML code** field is a plain code box: paste your full email
@@ -215,7 +220,7 @@ snippets).
 
 ## Page builder
 
-The **Page builder** button on CRM pages is Corteza's layout editor: it
+The **Page builder** (sidebar **Admin** menu > Page builder) on CRM pages is Corteza's layout editor: it
 moves and resizes the boxes (blocks), adds new ones (lists, charts, metrics,
 buttons) and configures them. Only users who may edit pages see it.
 Administrators do; members of the **CRM user** role don't. Keep it for
@@ -307,3 +312,21 @@ update compose_record set owned_by = <user id> where owned_by = 0 and rel_namesp
   clicking Send again continues with the remaining Queued ones.
 - `crm-user` can execute all workflows. Narrow
   `corteza::automation:workflow/*` to specific workflows if needed.
+
+## Web app changes (compose)
+
+The compose web app is built from `client/web/compose` in the image
+(`deploy/oracle/Dockerfile`); the other web apps come from the release. The
+DM-CRM changes are marked `DM-CRM` in the source:
+
+- `components/Common/Grid.vue`: on viewed pages, blocks grow to fit their
+  content instead of scrolling, and the blocks below move down. The page
+  builder still shows and saves the stored sizes.
+- `components/Namespaces/NamespaceSidebar.vue` and
+  `views/Public/Pages/View.vue`, `views/Public/Pages/Records/View.vue`: the
+  page builder, page settings and module editor links moved from the top
+  bar into the sidebar's **Admin** menu.
+
+The look (softer borders, rounded cards, muted field labels, the inline-edit
+pencil shown on hover) is `branding/dm-crm-ui.scss`, applied as the general
+custom CSS by `apply-branding-settings.sh`.

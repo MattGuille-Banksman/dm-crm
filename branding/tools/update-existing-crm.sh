@@ -111,8 +111,9 @@ q "insert into rbac_rules (rel_role, resource, operation, access)
                       ('record', '/*', 'delete'), ('record', '/*', 'revisions.search')) as x(res, suffix, op)
    where m.handle = 'AiSettings' and m.deleted_at is null and a.handle = 'authenticated'
    on conflict do nothing;"
-# the AI generator reads the admin-only AI settings, so it runs as the admin
-q "update automation_workflows set run_as = (select id from users where email = '$ADMIN' and deleted_at is null) where handle = 'crm_campaign_generate_content';"
+# the AI generator reads the admin-only AI settings and the import tidy-up
+# runs on a timer with no user, so both run as the admin
+q "update automation_workflows set run_as = (select id from users where email = '$ADMIN' and deleted_at is null) where handle in ('crm_campaign_generate_content', 'crm_contacts_tidy_imports');"
 
 echo "== 4/4 branding settings and restart"
 if [ "$DB" = corteza ]; then

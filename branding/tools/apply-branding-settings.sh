@@ -39,3 +39,21 @@ apply() {
 
 apply ui.studio.themes "$THEMES"
 apply code-snippets "$SNIPPETS"
+
+# custom CSS (branding/dm-crm-ui.scss) as the "general" entry. It is
+# replaced while it is empty or still an older DM-CRM version (its first
+# line is the version marker); CSS edited in the admin area without that
+# marker is kept.
+CSS_FILE="$TOOLS/../dm-crm-ui.scss"
+marker=$(head -1 "$CSS_FILE" | tr -d '/* [:space:]')
+css=$(perl -0777 -pe 's/\\/\\\\/g; s/"/\\"/g; s/\t/\\t/g; s/\r//g; s/\n/\\n/g' "$CSS_FILE")
+current=$(get ui.studio.custom-css)
+general=$(printf '%s' "$current" | grep -o '"id":"general","values":"[^"]\{0,40\}' || true)
+if [ "$FORCE" = "--force" ] || [ -z "$current" ] || [ "$current" = "[]" ] || [ "$current" = "null" ] \
+   || [ "$general" = '"id":"general","values":"' ] \
+   || { [[ "$general" == *DM-CRMUIv* ]] && [[ "$general" != *"$marker"* ]]; }; then
+  set_setting ui.studio.custom-css "[{\"id\":\"general\",\"values\":\"$css\"},{\"id\":\"light\",\"values\":\"\"},{\"id\":\"dark\",\"values\":\"\"}]"
+  echo "set ui.studio.custom-css ($marker)"
+else
+  echo "kept ui.studio.custom-css (already set)"
+fi

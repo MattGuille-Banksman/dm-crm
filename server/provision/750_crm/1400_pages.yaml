@@ -17,7 +17,7 @@ pages:
 
   # ===========================================================================
   CrmHome:
-    title: Home
+    title: Dashboard
     visible: true
     weight: 1
     blocks:
@@ -124,7 +124,7 @@ pages:
     page_layouts:
       CrmHomeDefault:
         primary: true
-        meta: { title: Home }
+        meta: { title: Dashboard }
         config:
           visibility: { expression: "" }
         blocks:
@@ -189,6 +189,7 @@ pages:
             kind: Record
             xywh: [0, 0, 13, 52]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: full_name
                 - name: email
@@ -230,6 +231,7 @@ pages:
             kind: Record
             xywh: [0, 66, 13, 170]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: first_name
                 - name: last_name
@@ -332,6 +334,7 @@ pages:
             kind: Record
             xywh: [36, 90, 12, 62]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: open_deals_count
                 - name: open_pipeline
@@ -341,6 +344,7 @@ pages:
                 - name: last_email_clicked_at
           # --- tab contents (not in the layout) ----------------------------
           - blockid: 10
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Activity
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -357,6 +361,7 @@ pages:
                 - name: occurred_at
                 - name: owner
           - blockid: 11
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Notes
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -370,6 +375,7 @@ pages:
                 - name: body
                 - name: pinned
           - blockid: 12
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Emails
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -385,6 +391,7 @@ pages:
                 - name: occurred_at
                 - name: owner
           - blockid: 13
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Calls
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -401,6 +408,7 @@ pages:
                 - name: duration_minutes
                 - name: owner
           - blockid: 14
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Tasks
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -416,6 +424,7 @@ pages:
                 - name: due_at
                 - name: owner
           - blockid: 15
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Meetings
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -431,6 +440,7 @@ pages:
                 - name: due_at
                 - name: owner
           - blockid: 16
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Marketing emails
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -480,6 +490,7 @@ pages:
             kind: Record
             xywh: [0, 0, 24, 80]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: contact
                 - name: address_type
@@ -557,6 +568,7 @@ pages:
                 kind: Record
                 xywh: [0, 0, 20, 71]
                 options:
+                  inlineRecordEditEnabled: true
                   fields:
                     - name: name
                     - name: list_type
@@ -570,6 +582,7 @@ pages:
                 kind: Record
                 xywh: [0, 71, 20, 98]
                 options:
+                  inlineRecordEditEnabled: true
                   fields:
                     - name: match_lifecycle
                     - name: match_lead_source
@@ -676,6 +689,7 @@ pages:
                 kind: Record
                 xywh: [0, 0, 24, 44]
                 options:
+                  inlineRecordEditEnabled: true
                   fields:
                     - name: segment
                     - name: contact
@@ -743,6 +757,7 @@ pages:
             kind: Record
             xywh: [0, 0, 13, 145]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: name
                 - name: website
@@ -802,6 +817,7 @@ pages:
                 - name: stage
                 - name: amount
           - blockid: 10
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Activity
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -817,6 +833,7 @@ pages:
                 - name: contact
                 - name: occurred_at
           - blockid: 11
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Notes
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -1024,6 +1041,7 @@ pages:
             kind: Record
             xywh: [0, 0, 13, 145]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: name
                 - name: stage
@@ -1082,6 +1100,7 @@ pages:
                 - name: name
                 - name: domain
           - blockid: 10
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Activity
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -1097,6 +1116,7 @@ pages:
                 - name: due_at
                 - name: owner
           - blockid: 11
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Notes
             kind: RecordList
             xywh: [0, 0, 24, 60]
@@ -1191,6 +1211,7 @@ pages:
             kind: Record
             xywh: [0, 0, 32, 116]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: activity_type
                 - name: subject
@@ -1230,6 +1251,7 @@ pages:
             kind: Record
             xywh: [0, 0, 32, 90]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: title
                 - name: body
@@ -1278,6 +1300,7 @@ pages:
             - { blockID: "13", title: Sent }
             - { blockID: "14", title: Archived }
       - blockid: 10
+        meta: { hidden: true }  # shown inside its Tabs block
         title: All emails
         kind: RecordList
         xywh: [0, 0, 48, 80]
@@ -1301,6 +1324,7 @@ pages:
             - name: clicked_count
             - name: owner
       - blockid: 11
+        meta: { hidden: true }  # shown inside its Tabs block
         title: Drafts
         kind: RecordList
         xywh: [0, 0, 48, 80]
@@ -1319,6 +1343,7 @@ pages:
             - name: segment
             - name: owner
       - blockid: 12
+        meta: { hidden: true }  # shown inside its Tabs block
         title: Scheduled
         kind: RecordList
         xywh: [0, 0, 48, 80]
@@ -1338,6 +1363,7 @@ pages:
             - name: recipients_count
             - name: owner
       - blockid: 13
+        meta: { hidden: true }  # shown inside its Tabs block
         title: Sent
         kind: RecordList
         xywh: [0, 0, 48, 80]
@@ -1358,6 +1384,7 @@ pages:
             - name: clicked_count
             - name: unsubscribed_count
       - blockid: 14
+        meta: { hidden: true }  # shown inside its Tabs block
         title: Archived
         kind: RecordList
         xywh: [0, 0, 48, 80]
@@ -1394,6 +1421,7 @@ pages:
             kind: Record
             xywh: [0, 0, 18, 143]
             options:
+              inlineRecordEditEnabled: true
               # "+" next to Campaign, Template and Audience creates a new one
               recordSelectorShowAddRecordButton: true
               recordSelectorAddRecordDisplayOption: modal
@@ -1549,6 +1577,7 @@ pages:
                 kind: Record
                 xywh: [0, 0, 22, 120]
                 options:
+                  inlineRecordEditEnabled: true
                   fields:
                     - name: name
                     - name: folder
@@ -1704,6 +1733,7 @@ pages:
                 - { blockID: "12", title: Emails not in a folder }
                 - { blockID: "13", title: Templates not in a folder }
           - blockid: 10
+            meta: { hidden: true }  # shown inside its Tabs block
             title: All emails
             kind: RecordList
             xywh: [0, 0, 34, 75]
@@ -1722,6 +1752,7 @@ pages:
                 - name: status
                 - name: sent_at
           - blockid: 11
+            meta: { hidden: true }  # shown inside its Tabs block
             title: All templates
             kind: RecordList
             xywh: [0, 0, 34, 75]
@@ -1738,6 +1769,7 @@ pages:
                 - name: folder
                 - name: category
           - blockid: 12
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Emails not in a folder
             kind: RecordList
             xywh: [0, 0, 34, 75]
@@ -1755,6 +1787,7 @@ pages:
                 - name: status
                 - name: sent_at
           - blockid: 13
+            meta: { hidden: true }  # shown inside its Tabs block
             title: Templates not in a folder
             kind: RecordList
             xywh: [0, 0, 34, 75]
@@ -1790,6 +1823,7 @@ pages:
                 kind: Record
                 xywh: [0, 0, 14, 40]
                 options:
+                  inlineRecordEditEnabled: true
                   fields:
                     - name: name
                     - name: description
@@ -1808,6 +1842,7 @@ pages:
                     - { blockID: "10", title: Emails in this folder }
                     - { blockID: "11", title: Templates in this folder }
               - blockid: 10
+                meta: { hidden: true }  # shown inside its Tabs block
                 title: Emails in this folder
                 kind: RecordList
                 xywh: [0, 0, 34, 75]
@@ -1825,6 +1860,7 @@ pages:
                     - name: sent_at
                     - name: opened_count
               - blockid: 11
+                meta: { hidden: true }  # shown inside its Tabs block
                 title: Templates in this folder
                 kind: RecordList
                 xywh: [0, 0, 34, 75]
@@ -1902,6 +1938,7 @@ pages:
                 kind: Record
                 xywh: [0, 0, 32, 134]
                 options:
+                  inlineRecordEditEnabled: true
                   fields:
                     - name: campaign
                     - name: contact
@@ -1979,6 +2016,7 @@ pages:
             kind: Record
             xywh: [0, 0, 22, 160]
             options:
+              inlineRecordEditEnabled: true
               recordSelectorShowAddRecordButton: true
               recordSelectorAddRecordDisplayOption: modal
               fields:
@@ -2069,6 +2107,7 @@ pages:
             kind: Record
             xywh: [22, 90, 26, 70]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: generated_content
         page_layouts:
@@ -2095,7 +2134,7 @@ pages:
 
   # ===========================================================================
   CrmReports:
-    title: Reports
+    title: Analytics & Reporting
     visible: true
     weight: 9
     blocks:
@@ -2132,7 +2171,7 @@ pages:
     page_layouts:
       CrmReportsDefault:
         primary: true
-        meta: { title: Pipeline revenue }
+        meta: { title: Analytics & Reporting }
         config:
           visibility: { expression: "" }
         blocks:
@@ -2277,7 +2316,7 @@ pages:
       - blockid: 2
         title: Deal stages
         kind: RecordList
-        xywh: [0, 14, 48, 45]
+        xywh: [0, 44, 48, 45]
         options:
           module: DealStage
           presort: position ASC
@@ -2291,7 +2330,7 @@ pages:
       - blockid: 3
         title: AI settings (administrators only)
         kind: RecordList
-        xywh: [0, 59, 24, 30]
+        xywh: [0, 89, 24, 30]
         options:
           module: AiSettings
           perPage: 5
@@ -2302,7 +2341,7 @@ pages:
       - blockid: 4
         title: Setting up the AI content generator
         kind: Content
-        xywh: [24, 59, 24, 30]
+        xywh: [24, 89, 24, 30]
         options:
           body: >-
             <p>The <strong>Generate content with AI</strong> button on a campaign sends the campaign brief to Claude and saves the draft in Generated content.</p>
@@ -2311,6 +2350,27 @@ pages:
             <li>Click <strong>Create new</strong> in AI settings, paste the key and save. Only one AI settings record is used.</li>
             </ol>
             <p>Each draft costs roughly 5p with Claude Opus 5.5, or about half that with Sonnet 5.5. Always read the draft before you use it.</p>
+      # users live in the Corteza admin area and the profile on the login
+      # server, so these are links rather than CRM records
+      - blockid: 5
+        title: Users
+        kind: Content
+        xywh: [0, 14, 24, 30]
+        options:
+          body: >-
+            <p>Add the people who use the CRM and choose what they can do.</p>
+            <p><a class="btn btn-primary" href="/admin/system/user/new" target="_blank" rel="noopener">Add a user</a>
+            <a class="btn btn-light" href="/admin/system/user/list" target="_blank" rel="noopener">Manage users</a></p>
+            <p>When you add someone, tick <strong>CRM user</strong> under Roles so they can work with contacts, deals and emails. Tick <strong>Administrator</strong> as well only for people who should manage settings and the AI key. They get an email to set their password if email sending is set up; otherwise set a password for them on the user's page.</p>
+      - blockid: 6
+        title: Your profile
+        kind: Content
+        xywh: [24, 14, 24, 30]
+        options:
+          body: >-
+            <p>Change your name, email address, password and two-factor sign-in.</p>
+            <p><a class="btn btn-primary" href="/auth" target="_blank" rel="noopener">Open my profile</a>
+            <a class="btn btn-light" href="/auth/change-password" target="_blank" rel="noopener">Change password</a></p>
     page_layouts:
       CrmSettingsDefault:
         primary: true
@@ -2319,9 +2379,11 @@ pages:
           visibility: { expression: "" }
         blocks:
           - { blockID: 1, xywh: [0, 0, 48, 14] }
-          - { blockID: 2, xywh: [0, 14, 48, 45] }
-          - { blockID: 3, xywh: [0, 59, 24, 30] }
-          - { blockID: 4, xywh: [24, 59, 24, 30] }
+          - { blockID: 5, xywh: [0, 14, 24, 30] }
+          - { blockID: 6, xywh: [24, 14, 24, 30] }
+          - { blockID: 2, xywh: [0, 44, 48, 45] }
+          - { blockID: 3, xywh: [0, 89, 24, 30] }
+          - { blockID: 4, xywh: [24, 89, 24, 30] }
     pages:
 
       RecordAiSettings:
@@ -2334,6 +2396,7 @@ pages:
             kind: Record
             xywh: [0, 0, 28, 46]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: name
                 - name: anthropic_api_key
@@ -2374,6 +2437,7 @@ pages:
             kind: Record
             xywh: [0, 0, 24, 62]
             options:
+              inlineRecordEditEnabled: true
               fields:
                 - name: name
                 - name: position
@@ -2439,6 +2503,7 @@ pages:
                 kind: Record
                 xywh: [0, 0, 32, 107]
                 options:
+                  inlineRecordEditEnabled: true
                   fields:
                     - name: workflow
                     - name: workflow_name

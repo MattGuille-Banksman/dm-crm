@@ -1,4 +1,4 @@
-# Only the server source and branding go into the DM-CRM image
+# Only the server source, the compose web app and branding go into the DM-CRM image
 *
 !server/
 !branding/
@@ -6,3 +6,7 @@
 server/**/*_test.go
 server/tests/
 server/webapp/
+!client/web/compose/
+!lib/eslint-client/
+client/web/compose/node_modules/
+client/web/compose/dist/

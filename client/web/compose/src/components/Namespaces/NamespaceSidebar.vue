@@ -66,15 +66,31 @@
             {{ $t('publicPages') }}
           </b-button>
 
-          <b-button
+          <!-- DM-CRM: admin menu; pages add their editing links to it -->
+          <b-dropdown
             v-else-if="namespace.canManageNamespace"
             data-test-id="button-admin"
             variant="light"
+            text="Admin"
+            block
+            menu-class="w-100"
             class="w-100 mb-2"
-            :to="{ name: 'admin.modules', params: { slug: namespace.slug || namespace.namespaceID } }"
           >
-            {{ $t('adminPanel') }}
-          </b-button>
+            <b-dropdown-item
+              :to="{ name: 'admin.modules', params: { slug: namespace.slug || namespace.namespaceID } }"
+            >
+              <font-awesome-icon
+                :icon="['fas', 'cogs']"
+                class="mr-2"
+              />
+              {{ $t('adminPanel') }}
+            </b-dropdown-item>
+
+            <portal-target
+              name="sidebar-admin-tools"
+              multiple
+            />
+          </b-dropdown>
 
           <c-input-search
             v-model.trim="query"

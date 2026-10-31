@@ -10,49 +10,32 @@
       {{ pageTitle }}
     </portal>
 
+    <!-- DM-CRM: page editing lives in the sidebar's Admin menu -->
     <portal
-      v-if="!isRecordPage"
-      to="topbar-tools"
+      v-if="!isRecordPage && page && page.canUpdatePage"
+      to="sidebar-admin-tools"
     >
-      <b-button-group
-        v-if="page && page.canUpdatePage"
-        size="sm"
+      <b-dropdown-item
+        data-test-id="button-page-builder"
+        :to="pageBuilder"
       >
-        <b-button
-          data-test-id="button-page-builder"
-          variant="primary"
-          class="d-flex align-items-center"
-          :to="pageBuilder"
-        >
-          {{ $t('general:label.pageBuilder') }}
-          <font-awesome-icon
-            :icon="['fas', 'tools']"
-            class="ml-2"
-          />
-        </b-button>
-
-        <b-button
-          v-b-tooltip.noninteractive.hover="{ title: $t('tooltip.edit.page'), boundary: 'body' }"
-          data-test-id="button-page-edit"
-          :to="pageEditor"
-          variant="primary"
-          class="d-flex align-items-center"
-          style="margin-left:2px;"
-        >
-          <font-awesome-icon
-            :icon="['far', 'edit']"
-          />
-        </b-button>
-
-        <page-translator
-          v-if="trPage"
-          data-test-id="button-page-translations"
-          :page.sync="trPage"
-          :page-layout.sync="layout"
-          button-variant="primary"
-          style="margin-left:2px;"
+        <font-awesome-icon
+          :icon="['fas', 'tools']"
+          class="mr-2"
         />
-      </b-button-group>
+        {{ $t('general:label.pageBuilder') }}
+      </b-dropdown-item>
+
+      <b-dropdown-item
+        data-test-id="button-page-edit"
+        :to="pageEditor"
+      >
+        <font-awesome-icon
+          :icon="['far', 'edit']"
+          class="mr-2"
+        />
+        {{ $t('tooltip.edit.page') }}
+      </b-dropdown-item>
     </portal>
 
     <div

@@ -21,6 +21,19 @@ RUN CGO_ENABLED=1 go build -mod=vendor \
       -ldflags "-X github.com/cortezaproject/corteza/server/pkg/version.Version=${VERSION}" \
       -o /out/corteza-server ./cmd/corteza
 
+# --- compose web app -----------------------------------------------------------
+# Built from client/web/compose, which carries DM-CRM changes (blocks grow to
+# fit their content, page editing in the sidebar Admin menu). The other web
+# apps come from the release.
+FROM node:20-bookworm AS compose
+ARG VERSION
+WORKDIR /src/client/web/compose
+COPY lib/eslint-client /src/lib/eslint-client
+COPY client/web/compose/package.json client/web/compose/yarn.lock ./
+RUN yarn install --frozen-lockfile --non-interactive --network-timeout 600000
+COPY client/web/compose ./
+RUN BUILD_VERSION=${VERSION} NODE_OPTIONS=--max-old-space-size=6144 yarn build
+
 # --- web apps and sass ---------------------------------------------------------
 FROM debian:bookworm-slim AS assets
 ARG VERSION
@@ -30,6 +43,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends curl ca-certifi
 WORKDIR /tmp
 RUN mkdir -p /out/webapp \
  && curl -fsSL "https://releases.cortezaproject.org/files/corteza-webapp-${VERSION}.tar.gz" | tar -xz -C /out/webapp
+COPY --from=compose /src/client/web/compose/dist /tmp/compose-dist
+RUN rm -rf /out/webapp/compose/js /out/webapp/compose/css \
+ && cp -r /tmp/compose-dist/. /out/webapp/compose/
 RUN case "${TARGETARCH:-amd64}" in arm64) SASS_ARCH=arm64 ;; *) SASS_ARCH=x64 ;; esac \
  && curl -fsSL "https://github.com/sass/dart-sass/releases/download/${SASS_VERSION}/dart-sass-${SASS_VERSION}-linux-${SASS_ARCH}.tar.gz" | tar -xz -C /out
 

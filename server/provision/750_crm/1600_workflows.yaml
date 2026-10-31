@@ -3185,3 +3185,68 @@ workflows:
         meta: { name: OK, visual: { id: "p55_60", parent: "1", value: null, points: [] } }
       - { parentid: 60, childid: 65, meta: { visual: { id: "p60_65", parent: "1", value: null, points: [] } } }
       - { parentid: 65, childid: 70, meta: { visual: { id: "p65_70", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # CSV imports skip record workflows, so imported contacts get no email
+  # intelligence. Every 5 minutes this re-saves contacts that have an email
+  # but no email domain yet, which runs crm_contact_defaults (names, domain,
+  # company from the domain) and gives records imported without an owner one.
+  # Runs as the administrator (run_as, set by the update script).
+  crm_contacts_tidy_imports:
+    meta:
+      name: "CRM: Contacts - tidy up imported contacts"
+      description: Every 5 minutes, fills names, email domain and company for contacts that were imported from CSV.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: system
+        eventType: onInterval
+        enabled: true
+        stepID: 20
+        constraints:
+          - { name: "", op: "", values: ["*/5 * * * *"] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "20", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 20
+        kind: iterator
+        ref: composeRecordsEach
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: query, type: String, value: "email LIKE '%@%' AND email_domain IS NULL" }
+          - { target: limit, type: UnsignedInteger, value: "200" }
+        results:
+          - { target: c, expr: "record" }
+        meta:
+          name: Each imported contact
+          visual: { id: "20", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 30
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "c" }
+        meta:
+          name: Re-save (runs email intelligence)
+          visual: { id: "30", parent: "1", value: null, xywh: [400, 0, 0, 0] }
+      - id: 32
+        kind: continue
+        meta:
+          name: Next contact
+          visual: { id: "32", parent: "1", value: null, xywh: [600, 0, 0, 0] }
+      - id: 40
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "40", parent: "1", value: null, xywh: [400, 200, 0, 0] }
+    paths:
+      # iterator: first path is the loop body, second is taken when done
+      - { parentid: 20, childid: 30, meta: { name: Loop, visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
+      - { parentid: 20, childid: 40, meta: { name: Done, visual: { id: "p20_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 32, meta: { visual: { id: "p30_32", parent: "1", value: null, points: [] } } }
