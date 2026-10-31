@@ -292,6 +292,7 @@
         <b-col
           cols="12"
           lg="6"
+          class="dmcrm-advanced"
         >
           <b-form-group
             :label="$t('edit.metric.fx.label')"
@@ -308,6 +309,7 @@
         <b-col
           cols="12"
           lg="6"
+          class="dmcrm-advanced"
         >
           <b-form-group
             :label="$t('edit.metric.options.label')"
@@ -358,6 +360,7 @@
           v-if="!hasRelativeDisplay(metric)"
           cols="12"
           lg="6"
+          class="dmcrm-advanced"
         >
           <b-form-group
             :label="$t('edit.metric.stack.label')"
@@ -374,6 +377,7 @@
           v-if="metric.type === 'scatter'"
           cols="12"
           lg="6"
+          class="dmcrm-advanced"
         >
           <b-form-group
             :label="$t('edit.metric.symbol.label')"
@@ -387,9 +391,9 @@
         </b-col>
       </b-row>
 
-      <hr>
+      <hr class="dmcrm-advanced">
 
-      <b-row>
+      <b-row class="dmcrm-advanced">
         <b-col
           cols="12"
           md="6"

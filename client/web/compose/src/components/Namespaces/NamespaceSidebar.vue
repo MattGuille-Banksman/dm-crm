@@ -153,23 +153,6 @@ const moduleWrap = (module, pageName) => {
   }
 }
 
-const chartWrap = (chart) => {
-  return {
-    page: {
-      name: 'admin.charts.edit',
-      pageID: `chart-${chart.chartID}`,
-      selfID: 'charts',
-      rootSelfID: 'charts',
-      title: chart.name || chart.handle,
-      visible: true,
-    },
-    children: [],
-    params: {
-      chartID: chart.chartID,
-    },
-  }
-}
-
 export default {
   i18nOptions: {
     namespaces: 'sidebar',
@@ -403,7 +386,8 @@ export default {
           },
           children: [],
         },
-        ...this.charts.map(chartWrap),
+        // DM-CRM: charts are listed on the Charts page only, not one sidebar
+        // entry per chart
       ]
     },
 

@@ -51,7 +51,7 @@
         <b-col
           v-if="!!module"
           cols="12"
-          class="mt-1"
+          class="mt-1 dmcrm-advanced"
         >
           <b-form-group
             :label="$t('edit.filter.label')"
@@ -134,7 +134,7 @@
           </b-row>
 
           <template v-if="!unSkippable">
-            <b-row>
+            <b-row class="dmcrm-advanced">
               <b-col
                 cols="12"
                 lg="6"
@@ -176,12 +176,14 @@
           </template>
         </template>
 
-        <slot
-          name="dimension-options"
-          :index="i"
-          :dimension="d"
-          :field="getField(d)"
-        />
+        <div class="dmcrm-advanced">
+          <slot
+            name="dimension-options"
+            :index="i"
+            :dimension="d"
+            :field="getField(d)"
+          />
+        </div>
       </fieldset>
     </div>
     <hr v-if="!!module">
@@ -291,20 +293,26 @@
       </draggable>
     </div>
 
-    <hr v-if="!!module && hasAxis">
+    <!-- DM-CRM: axis, legend and display tweaks only show with Advanced settings -->
+    <div class="dmcrm-advanced">
+      <hr v-if="!!module && hasAxis">
 
-    <template v-if="hasAxis">
-      <slot
-        name="y-axis"
-        :report="editReport"
-      />
-    </template>
+      <template v-if="hasAxis">
+        <slot
+          name="y-axis"
+          :report="editReport"
+        />
+      </template>
+    </div>
 
-    <hr v-if="hasLegend">
+    <hr
+      v-if="hasLegend"
+      class="dmcrm-advanced"
+    >
 
     <div
       v-if="hasLegend"
-      class="px-3"
+      class="px-3 dmcrm-advanced"
     >
       <h5 class="mb-3">
         {{ $t('edit.additionalConfig.legend.label') }}
@@ -453,12 +461,14 @@
       </b-row>
     </div>
 
-    <slot
-      name="additional-config"
-      :report="editReport"
-      :metrics="metrics"
-      :has-axis="hasAxis"
-    />
+    <div class="dmcrm-advanced">
+      <slot
+        name="additional-config"
+        :report="editReport"
+        :metrics="metrics"
+        :has-axis="hasAxis"
+      />
+    </div>
   </div>
 </template>
 

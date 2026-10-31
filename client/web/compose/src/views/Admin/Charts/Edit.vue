@@ -19,11 +19,27 @@
     >
       <b-row>
         <b-col>
+          <!-- DM-CRM: the essentials show by default; anything marked
+               dmcrm-advanced only shows with Advanced settings switched on -->
           <b-card
             no-body
-            class="shadow-sm"
+            class="shadow-sm dmcrm-chart-editor"
+            :class="{ 'show-advanced': showAdvanced }"
           >
             <b-card-header class="d-flex py-3 align-items-center border-bottom gap-1">
+              <b-button
+                variant="light"
+                class="d-flex align-items-center order-last ml-auto"
+                :pressed="showAdvanced"
+                @click="toggleAdvanced"
+              >
+                <font-awesome-icon
+                  :icon="['fas', showAdvanced ? 'chevron-up' : 'chevron-down']"
+                  class="mr-2"
+                />
+                {{ showAdvanced ? 'Hide advanced settings' : 'Advanced settings' }}
+              </b-button>
+
               <export
                 v-if="namespace.canExportCharts"
                 slot="header"
@@ -76,6 +92,7 @@
                     <b-col
                       cols="12"
                       lg="6"
+                      class="dmcrm-advanced"
                     >
                       <b-form-group
                         :label="$t('handle')"
@@ -97,6 +114,7 @@
                     <b-col
                       cols="12"
                       lg="6"
+                      class="dmcrm-advanced"
                     >
                       <b-form-group
                         :label="$t('colorScheme.label')"
@@ -170,7 +188,7 @@
                     <b-col
                       cols="12"
                       lg="6"
-                      class="mt-2 mt-md-0"
+                      class="mt-2 mt-md-0 dmcrm-advanced"
                     >
                       <b-form-group
                         :label="$t('edit.animation.label')"
@@ -248,10 +266,10 @@
                   :supported-metrics="1"
                 />
 
-                <hr>
+                <hr class="dmcrm-advanced">
 
                 <div
-                  class="px-3"
+                  class="px-3 dmcrm-advanced"
                 >
                   <h5 class="mb-3">
                     {{ $t('edit.toolbox.label') }}
@@ -458,6 +476,16 @@ import { evaluatePrefilter } from 'corteza-webapp-compose/src/lib/record-filter'
 const { CInputCheckbox, CInputColorPicker } = components
 const { colorschemes } = shared
 
+// DM-CRM: whether the chart editor shows its advanced settings
+const advancedPreferenceKey = 'dmcrm-chart-editor-advanced'
+const readAdvancedPreference = () => {
+  try {
+    return window.localStorage.getItem(advancedPreferenceKey) === '1'
+  } catch (e) {
+    return false
+  }
+}
+
 const defaultReport = {
   moduleID: undefined,
   metrics: [{ field: 'count' }],
@@ -532,6 +560,9 @@ export default {
         on: this.$t('general:label.yes'),
         off: this.$t('general:label.no'),
       },
+
+      // DM-CRM: remembered per browser
+      showAdvanced: readAdvancedPreference(),
     }
   },
 
@@ -798,6 +829,13 @@ export default {
       this.update()
     }, 300),
 
+    toggleAdvanced () {
+      this.showAdvanced = !this.showAdvanced
+      try {
+        window.localStorage.setItem(advancedPreferenceKey, this.showAdvanced ? '1' : '0')
+      } catch (e) {}
+    },
+
     onUpdated () {
       this.processing = false
     },
@@ -1027,6 +1065,10 @@ export default {
 </script>
 
 <style lang="scss">
+// DM-CRM: advanced chart settings stay hidden until switched on
+.dmcrm-chart-editor:not(.show-advanced) .dmcrm-advanced {
+  display: none !important;
+}
 
 .chart-preview {
   max-height: 50%;

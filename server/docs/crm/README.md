@@ -326,6 +326,13 @@ DM-CRM changes are marked `DM-CRM` in the source:
   `views/Public/Pages/View.vue`, `views/Public/Pages/Records/View.vue`: the
   page builder, page settings and module editor links moved from the top
   bar into the sidebar's **Admin** menu.
+- `views/Admin/Charts/Edit.vue`, `components/Chart/Report/ReportEdit.vue` and
+  `GenericChart.vue`: the chart editor shows the essentials (name, module,
+  preset filter, group by, metric, chart type) with a live preview; handle,
+  colours, animation, custom filter, axis, legend, formatting and toolbox
+  options are behind **Advanced settings** (remembered per browser). Elements
+  marked `dmcrm-advanced` are the ones it hides.
+- The admin sidebar no longer lists every chart; the Charts page does.
 
 The look (softer borders, rounded cards, muted field labels, the inline-edit
 pencil shown on hover) is `branding/dm-crm-ui.scss`, applied as the general
