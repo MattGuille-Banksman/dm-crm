@@ -2681,3 +2681,507 @@ workflows:
       - { parentid: 20, childid: 40, meta: { name: Done, visual: { id: "p20_40", parent: "1", value: null, points: [] } } }
       - { parentid: 30, childid: 31, meta: { visual: { id: "p30_31", parent: "1", value: null, points: [] } } }
       - { parentid: 31, childid: 32, meta: { visual: { id: "p31_32", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Contact card quick actions (buttons under the contact's name)
+
+  crm_contact_quick_note:
+    meta:
+      name: "CRM: Contact quick action - Note"
+      description: Opens a new note for this contact in a pop-up, pre-filled and ready to save.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: prompt
+        ref: recordPage
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Note }
+          - { target: values, type: KV, expr: '{"contact": format("%v", record.ID), "company": isEmpty(record.values.company) ? "" : format("%v", record.values.company)}' }
+          - { target: edit, type: Boolean, value: "true" }
+          - { target: openMode, type: String, value: modal }
+        meta:
+          name: New note
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+    paths: []
+
+  crm_contact_quick_email:
+    meta:
+      name: "CRM: Contact quick action - Email"
+      description: Opens a new email for this contact in a pop-up, pre-filled and ready to save.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: prompt
+        ref: recordPage
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Activity }
+          - { target: values, type: KV, expr: '{"contact": format("%v", record.ID), "company": isEmpty(record.values.company) ? "" : format("%v", record.values.company), "activity_type": "Email", "status": "Completed", "direction": "Outbound"}' }
+          - { target: edit, type: Boolean, value: "true" }
+          - { target: openMode, type: String, value: modal }
+        meta:
+          name: New email
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+    paths: []
+
+  crm_contact_quick_call:
+    meta:
+      name: "CRM: Contact quick action - Call"
+      description: Opens a new call for this contact in a pop-up, pre-filled and ready to save.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: prompt
+        ref: recordPage
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Activity }
+          - { target: values, type: KV, expr: '{"contact": format("%v", record.ID), "company": isEmpty(record.values.company) ? "" : format("%v", record.values.company), "activity_type": "Call", "status": "Planned", "direction": "Outbound"}' }
+          - { target: edit, type: Boolean, value: "true" }
+          - { target: openMode, type: String, value: modal }
+        meta:
+          name: New call
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+    paths: []
+
+  crm_contact_quick_task:
+    meta:
+      name: "CRM: Contact quick action - Task"
+      description: Opens a new task for this contact in a pop-up, pre-filled and ready to save.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: prompt
+        ref: recordPage
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Activity }
+          - { target: values, type: KV, expr: '{"contact": format("%v", record.ID), "company": isEmpty(record.values.company) ? "" : format("%v", record.values.company), "activity_type": "Task", "status": "Planned", "direction": "Outbound"}' }
+          - { target: edit, type: Boolean, value: "true" }
+          - { target: openMode, type: String, value: modal }
+        meta:
+          name: New task
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+    paths: []
+
+  crm_contact_quick_meeting:
+    meta:
+      name: "CRM: Contact quick action - Meeting"
+      description: Opens a new meeting for this contact in a pop-up, pre-filled and ready to save.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Contact] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: prompt
+        ref: recordPage
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Activity }
+          - { target: values, type: KV, expr: '{"contact": format("%v", record.ID), "company": isEmpty(record.values.company) ? "" : format("%v", record.values.company), "activity_type": "Meeting", "status": "Planned", "direction": "Outbound"}' }
+          - { target: edit, type: Boolean, value: "true" }
+          - { target: openMode, type: String, value: modal }
+        meta:
+          name: New meeting
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+    paths: []
+
+  # ===========================================================================
+  # Lists: turn the simple choices on a list into its Contact filter
+  crm_segment_build_filter:
+    meta:
+      name: "CRM: List - build filter from choices"
+      description: Writes the list's filter from the simple choices (lifecycle, source, status, owner, country, tag, engagement, deals) unless "write the filter myself" is ticked. No choices means every contact.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: beforeCreate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Segment] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 0, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+      - resourceType: compose:record
+        eventType: beforeUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Segment] }
+        meta:
+          visual:
+            id: "t2"
+            parent: "1"
+            xywh: [0, 160, 0, 0]
+            edges:
+              - { parentID: "t2", childID: "10", meta: { visual: { id: "et2", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Simple filter?
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+      - id: 20
+        kind: expressions
+        arguments:
+          - { target: p0, type: Array, expr: "[]" }
+          - { target: p1, type: Array, expr: 'isEmpty(record.values.match_lifecycle) ? p0 : push(p0, "lifecycle_stage IN (''" + join(record.values.match_lifecycle, "'',''") + "'')")' }
+          - { target: p2, type: Array, expr: 'isEmpty(record.values.match_lead_source) ? p1 : push(p1, "lead_source IN (''" + join(record.values.match_lead_source, "'',''") + "'')")' }
+          - { target: p3, type: Array, expr: 'isEmpty(record.values.match_status) ? p2 : push(p2, "status IN (''" + join(record.values.match_status, "'',''") + "'')")' }
+          - { target: p4, type: Array, expr: 'isEmpty(record.values.match_owner) ? p3 : push(p3, "owner IN (" + join(record.values.match_owner, ",") + ")")' }
+          - { target: country, type: String, expr: 'trim(coalesce(record.values.match_country, ""))' }
+          - { target: p5, type: Array, expr: 'country == "" ? p4 : push(p4, "country = ''" + replace(country, "''", "''''", -1) + "''")' }
+          - { target: tag, type: String, expr: 'trim(coalesce(record.values.match_tag, ""))' }
+          - { target: p6, type: Array, expr: 'tag == "" ? p5 : push(p5, "tags = ''" + replace(tag, "''", "''''", -1) + "''")' }
+          - { target: engagement, type: String, expr: 'coalesce(record.values.match_engagement, "")' }
+          - { target: p7, type: Array, expr: 'engagement == "Opened recently" ? push(p6, "last_email_opened_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)") : (engagement == "Clicked recently" ? push(p6, "last_email_clicked_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)") : (engagement == "Never opened" ? push(p6, "emails_sent_count > 0 AND NOT (emails_opened_count > 0)") : (engagement == "Not emailed" ? push(p6, "(emails_sent_count IS NULL OR emails_sent_count = 0)") : p6)))' }
+          - { target: deals, type: String, expr: 'coalesce(record.values.match_deals, "")' }
+          - { target: p8, type: Array, expr: 'deals == "Open deal" ? push(p7, "open_deals_count > 0") : (deals == "Won deal" ? push(p7, "won_deals_count > 0") : (deals == "No deals" ? push(p7, "(deals_count IS NULL OR deals_count = 0)") : p7))' }
+          - { target: record.values.filter, type: Any, expr: 'join(p8, " AND ")' }
+        meta:
+          name: Write filter
+          visual: { id: "20", parent: "1", value: null, xywh: [500, 0, 0, 0] }
+      - id: 99
+        kind: termination
+        meta:
+          name: Done
+          visual: { id: "99", parent: "1", value: null, xywh: [750, 80, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: "record.values.use_advanced_filter != true"
+        meta: { name: Yes, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 99
+        expr: ""
+        meta: { name: Advanced, visual: { id: "p10_99", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 99, meta: { visual: { id: "p20_99", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Campaign: new email linked to this campaign (button on the campaign page)
+  crm_campaign_new_email:
+    meta:
+      name: "CRM: Campaign - create email"
+      description: Opens a new email in a pop-up, already linked to this campaign and its audience list.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Campaign] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: prompt
+        ref: recordPage
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: EmailCampaign }
+          - { target: values, type: KV, expr: '{"campaign": format("%v", record.ID), "segment": isEmpty(record.values.audience) ? "" : format("%v", record.values.audience), "status": "Draft"}' }
+          - { target: edit, type: Boolean, value: "true" }
+          - { target: openMode, type: String, value: modal }
+        meta:
+          name: New email
+          visual: { id: "10", parent: "1", value: null, xywh: [250, 80, 0, 0] }
+    paths: []
+
+  # ===========================================================================
+  # Campaign: draft content from the brief with Claude (button on the campaign)
+  #
+  # Reads the API key from the AI settings record, which only administrators
+  # can read, so the update script sets this workflow to run as an
+  # administrator (run_as).
+  crm_campaign_generate_content:
+    meta:
+      name: "CRM: Campaign - generate content with AI"
+      description: Sends the campaign brief to Claude (Anthropic API) and saves the drafted copy in Generated content.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: onManual
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Campaign] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 80, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: function
+        ref: composeRecordsSearch
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: AiSettings }
+          - { target: limit, type: UnsignedInteger, value: "1" }
+          - { target: incTotal, type: Boolean, value: "true" }
+        results:
+          - { target: found, expr: "total" }
+          - { target: rows, expr: "records" }
+        meta:
+          name: Load AI settings
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 15
+        kind: gateway
+        ref: excl
+        meta:
+          name: Settings exist?
+          visual: { id: "15", parent: "1", value: null, xywh: [400, 80, 0, 0] }
+      - id: 16
+        kind: error
+        arguments:
+          - { target: message, type: String, value: "The AI generator isn't set up yet. An administrator needs to add the Anthropic API key under Settings > AI settings." }
+        meta:
+          name: Not set up
+          visual: { id: "16", parent: "1", value: null, xywh: [400, 280, 0, 0] }
+      - id: 20
+        kind: expressions
+        arguments:
+          - { target: settings, type: ComposeRecord, expr: "rows[0]" }
+          - { target: apiKey, type: String, expr: 'trim(coalesce(settings.values.anthropic_api_key, ""))' }
+        meta:
+          name: Read key
+          visual: { id: "20", parent: "1", value: null, xywh: [600, 80, 0, 0] }
+      - id: 25
+        kind: gateway
+        ref: excl
+        meta:
+          name: Key entered?
+          visual: { id: "25", parent: "1", value: null, xywh: [800, 80, 0, 0] }
+      - id: 30
+        kind: expressions
+        arguments:
+          - { target: model, type: String, expr: 'coalesce(settings.values.model, "claude-opus-5-5")' }
+          - { target: effort, type: String, expr: 'coalesce(settings.values.effort, "medium")' }
+          - { target: channels, type: String, expr: 'isEmpty(record.values.channels) ? "Email" : join(record.values.channels, ", ")' }
+          - { target: style, type: String, expr: 'isEmpty(record.values.writing_style) ? "Professional, friendly" : join(record.values.writing_style, ", ")' }
+          - { target: brief, type: String, expr: '"Campaign name: " + coalesce(record.values.name, "") + "\nWhat the campaign is about: " + coalesce(record.values.about, "") + "\nWhat the audience should know:\n- " + coalesce(record.values.key_message_1, "") + "\n- " + coalesce(record.values.key_message_2, "") + "\n- " + coalesce(record.values.key_message_3, "") + "\nKeywords: " + coalesce(record.values.keywords, "") + "\nWhat the audience should do: " + coalesce(record.values.call_to_action, "") + "\nWriting style: " + style + "\nChannels: " + channels' }
+          - { target: system, type: String, value: "You are a senior marketing copywriter. You write clear, specific, on-brief copy in British English for a small business, and never invent facts, prices, statistics or claims that are not in the brief. Format your answer as simple HTML fragments for a rich-text editor: use <h3> for section headings, <p> for paragraphs and <ul><li> for lists. Do not wrap it in <html> or <body>, and do not use Markdown." }
+          - { target: prompt, type: String, expr: '"Draft marketing content for this campaign.\n\n" + brief + "\n\nWrite one section per channel listed. For Email: three subject line options, a preview line, and a complete email body with a clear call to action. For Social media: three short posts. For Google Ads: three ad variants, each with three headlines of at most 30 characters and two descriptions of at most 90 characters. For Blog: a title and an outline. For Landing page: a headline, subheadline, three benefit bullets and a call-to-action button label. For Events: a short invitation. Skip any channel not listed. Leave out any part of the brief that is empty rather than guessing."' }
+          - { target: requestBody, type: String, expr: 'toJSON({"model": model, "max_tokens": 16000, "fallbacks": "default", "output_config": {"effort": effort}, "system": system, "messages": [{"role": "user", "content": prompt}]})' }
+          - { target: requestHeaders, type: KVV, expr: '{"x-api-key": [apiKey], "anthropic-version": ["2026-10-21"], "anthropic-beta": ["server-side-fallback-2026-07-01"]}' }
+        meta:
+          name: Build request
+          visual: { id: "30", parent: "1", value: null, xywh: [1000, 0, 0, 0] }
+      - id: 40
+        kind: function
+        ref: httpRequestSend
+        arguments:
+          - { target: url, type: String, value: "https://api.anthropic.com/v1/messages" }
+          - { target: method, type: String, value: POST }
+          - { target: headers, type: KVV, expr: "requestHeaders" }
+          - { target: headerContentType, type: String, value: application/json }
+          - { target: timeout, type: Duration, value: "300s" }
+          - { target: body, type: String, expr: "requestBody" }
+        results:
+          - { target: responseText, type: String, expr: "body" }
+        meta:
+          name: Ask Claude
+          visual: { id: "40", parent: "1", value: null, xywh: [1200, 0, 0, 0] }
+      - id: 50
+        kind: function
+        ref: jsenvExecute
+        arguments:
+          - { target: scope, type: Any, expr: "responseText" }
+          - target: source
+            type: String
+            value: |
+              var r;
+              try { r = JSON.parse(input); } catch (e) { return "ERROR: Claude's reply could not be read."; }
+              if (r.type === "error") { return "ERROR: Claude API: " + (r.error && r.error.message ? r.error.message : "unknown error"); }
+              if (r.stop_reason === "refusal") { return "ERROR: Claude declined to write this content. Try rewording the brief."; }
+              var parts = [];
+              for (var i = 0; i < (r.content || []).length; i++) {
+                if (r.content[i].type === "text") { parts.push(r.content[i].text); }
+              }
+              var out = parts.join("\n");
+              if (!out) { return "ERROR: Claude returned no text."; }
+              if (r.stop_reason === "max_tokens") { out += "\n<p><em>(The draft was cut off at the length limit.)</em></p>"; }
+              return out;
+        results:
+          - { target: generated, expr: "resultString" }
+        meta:
+          name: Read the reply
+          visual: { id: "50", parent: "1", value: null, xywh: [1400, 0, 0, 0] }
+      - id: 55
+        kind: gateway
+        ref: excl
+        meta:
+          name: Worked?
+          visual: { id: "55", parent: "1", value: null, xywh: [1600, 0, 0, 0] }
+      - id: 56
+        kind: error
+        arguments:
+          - { target: message, type: String, expr: 'trim(replace(generated, "ERROR:", "", 1))' }
+        meta:
+          name: Show the problem
+          visual: { id: "56", parent: "1", value: null, xywh: [1600, 200, 0, 0] }
+      - id: 60
+        kind: expressions
+        arguments:
+          - { target: record.values.generated_content, type: Any, expr: "generated" }
+        meta:
+          name: Store the draft
+          visual: { id: "60", parent: "1", value: null, xywh: [1800, 0, 0, 0] }
+      - id: 65
+        kind: function
+        ref: composeRecordsUpdate
+        arguments:
+          - { target: record, type: ComposeRecord, expr: "record" }
+        meta:
+          name: Save campaign
+          visual: { id: "65", parent: "1", value: null, xywh: [2000, 0, 0, 0] }
+      - id: 70
+        kind: prompt
+        ref: notification
+        arguments:
+          - { target: title, type: String, value: Content generated }
+          - { target: message, type: String, value: "The draft is in Generated content. Review it before using it." }
+          - { target: variant, type: String, value: success }
+        meta:
+          name: Tell the user
+          visual: { id: "70", parent: "1", value: null, xywh: [2200, 0, 0, 0] }
+    paths:
+      - { parentid: 10, childid: 15, meta: { visual: { id: "p10_15", parent: "1", value: null, points: [] } } }
+      - parentid: 15
+        childid: 20
+        expr: "found > 0"
+        meta: { name: Yes, visual: { id: "p15_20", parent: "1", value: null, points: [] } }
+      - parentid: 15
+        childid: 16
+        expr: ""
+        meta: { name: No, visual: { id: "p15_16", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 25, meta: { visual: { id: "p20_25", parent: "1", value: null, points: [] } } }
+      - parentid: 25
+        childid: 30
+        expr: 'apiKey != ""'
+        meta: { name: Yes, visual: { id: "p25_30", parent: "1", value: null, points: [] } }
+      - parentid: 25
+        childid: 16
+        expr: ""
+        meta: { name: No, visual: { id: "p25_16", parent: "1", value: null, points: [] } }
+      - { parentid: 30, childid: 40, meta: { visual: { id: "p30_40", parent: "1", value: null, points: [] } } }
+      - { parentid: 40, childid: 50, meta: { visual: { id: "p40_50", parent: "1", value: null, points: [] } } }
+      - { parentid: 50, childid: 55, meta: { visual: { id: "p50_55", parent: "1", value: null, points: [] } } }
+      - parentid: 55
+        childid: 56
+        expr: 'hasPrefix(generated, "ERROR:")'
+        meta: { name: Problem, visual: { id: "p55_56", parent: "1", value: null, points: [] } }
+      - parentid: 55
+        childid: 60
+        expr: ""
+        meta: { name: OK, visual: { id: "p55_60", parent: "1", value: null, points: [] } }
+      - { parentid: 60, childid: 65, meta: { visual: { id: "p60_65", parent: "1", value: null, points: [] } } }
+      - { parentid: 65, childid: 70, meta: { visual: { id: "p65_70", parent: "1", value: null, points: [] } } }

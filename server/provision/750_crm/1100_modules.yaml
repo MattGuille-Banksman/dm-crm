@@ -597,6 +597,13 @@ modules:
         label: Template name
         kind: String
         required: true
+      folder:
+        label: Folder
+        kind: Record
+        options:
+          module: EmailFolder
+          labelField: name
+          queryFields: [name]
       category:
         label: Category
         kind: Select
@@ -636,13 +643,185 @@ modules:
         defaultValue: "1"
 
   # ---------------------------------------------------------------------------
-  EmailCampaign:
-    name: Email campaign
+  # Folders to organise campaigns and templates (Email > Folders)
+  EmailFolder:
+    name: Email folder
+    fields:
+      name:
+        label: Folder name
+        kind: String
+        required: true
+      description:
+        label: Description
+        kind: String
+        options:
+          multiLine: true
+      owner:
+        label: Owner
+        kind: User
+        options:
+          presetWithAuthenticated: true
+
+  # ---------------------------------------------------------------------------
+  # AI content generator settings (one record). Only administrators can read
+  # these records (see 1050_access_control.yaml); the generator workflow runs
+  # as an administrator to read the key.
+  AiSettings:
+    name: AI settings
+    fields:
+      name:
+        label: Name
+        kind: String
+        defaultValue: Claude API
+      anthropic_api_key:
+        label: Anthropic API key
+        kind: String
+      model:
+        label: Model
+        kind: Select
+        defaultValue: claude-opus-5-5
+        options:
+          options:
+            - { value: claude-opus-5-5, text: Claude Opus 5.5 (best quality) }
+            - { value: claude-sonnet-5-5, text: Claude Sonnet 5.5 (about half the cost) }
+      effort:
+        label: Effort
+        kind: Select
+        defaultValue: medium
+        options:
+          options:
+            - { value: low, text: Low (fastest, cheapest) }
+            - { value: medium, text: Medium (recommended) }
+            - { value: high, text: High (most thorough) }
+
+  # ---------------------------------------------------------------------------
+  # Marketing campaign, HubSpot style: groups emails (and later other assets)
+  # and holds the brief the content is written from
+  Campaign:
+    name: Campaign
     fields:
       name:
         label: Campaign name
         kind: String
         required: true
+      status:
+        label: Status
+        kind: Select
+        defaultValue: Planning
+        options:
+          displayType: badge
+          options:
+            - { value: Planning, text: Planning }
+            - { value: Active, text: Active }
+            - { value: Paused, text: Paused }
+            - { value: Completed, text: Completed }
+      owner:
+        label: Campaign owner
+        kind: User
+        options:
+          presetWithAuthenticated: true
+      start_date:
+        label: Start date
+        kind: DateTime
+        options:
+          onlyDate: true
+      end_date:
+        label: End date
+        kind: DateTime
+        options:
+          onlyDate: true
+      budget:
+        label: Budget
+        kind: Number
+        options: { precision: 2 }
+      audience:
+        label: Audience (list)
+        kind: Record
+        options:
+          module: Segment
+          labelField: name
+          queryFields: [name]
+      channels:
+        label: Channels
+        kind: Select
+        multi: true
+        options:
+          options:
+            - { value: Email, text: Email }
+            - { value: Social media, text: Social media }
+            - { value: Google Ads, text: Google Ads }
+            - { value: Blog, text: Blog }
+            - { value: Landing page, text: Landing page }
+            - { value: Events, text: Events }
+      about:
+        label: What is your campaign about?
+        kind: String
+        options:
+          multiLine: true
+      key_message_1:
+        label: What do you want your audience to know? (1)
+        kind: String
+      key_message_2:
+        label: What do you want your audience to know? (2)
+        kind: String
+      key_message_3:
+        label: What do you want your audience to know? (3)
+        kind: String
+      keywords:
+        label: Keywords
+        kind: String
+      call_to_action:
+        label: What do you want your audience to do?
+        kind: String
+      writing_style:
+        label: Writing style
+        kind: Select
+        multi: true
+        options:
+          options:
+            - { value: Professional, text: Professional }
+            - { value: Friendly, text: Friendly }
+            - { value: Helpful, text: Helpful }
+            - { value: Persuasive, text: Persuasive }
+            - { value: Informative, text: Informative }
+            - { value: Creative, text: Creative }
+            - { value: Humorous, text: Humorous }
+      generated_content:
+        label: Generated content
+        kind: String
+        options:
+          multiLine: true
+          useRichTextEditor: true
+      notes:
+        label: Notes
+        kind: String
+        options:
+          multiLine: true
+
+  # ---------------------------------------------------------------------------
+  # A marketing email (the handle stays EmailCampaign for compatibility).
+  # It can belong to a Campaign.
+  EmailCampaign:
+    name: Email
+    fields:
+      name:
+        label: Email name
+        kind: String
+        required: true
+      campaign:
+        label: Campaign
+        kind: Record
+        options:
+          module: Campaign
+          labelField: name
+          queryFields: [name]
+      folder:
+        label: Folder
+        kind: Record
+        options:
+          module: EmailFolder
+          labelField: name
+          queryFields: [name]
       status:
         label: Status
         kind: Select
@@ -656,6 +835,7 @@ modules:
             - { value: Sent, text: Sent }
             - { value: Paused, text: Paused }
             - { value: Cancelled, text: Cancelled }
+            - { value: Archived, text: Archived }
       template:
         label: Template
         kind: Record
@@ -821,8 +1001,83 @@ modules:
           options:
             - { value: Active, text: "Active (updates automatically)" }
             - { value: Static, text: "Static (fixed snapshot)" }
+      # Simple filter: these choices are turned into the filter below by the
+      # crm_segment_build_filter workflow (empty choices mean "any")
+      match_lifecycle:
+        label: Lifecycle stage is any of
+        kind: Select
+        multi: true
+        options:
+          options:
+            - { value: Subscriber, text: Subscriber }
+            - { value: Lead, text: Lead }
+            - { value: MQL, text: Marketing qualified lead }
+            - { value: SQL, text: Sales qualified lead }
+            - { value: Opportunity, text: Opportunity }
+            - { value: Customer, text: Customer }
+            - { value: Evangelist, text: Evangelist }
+            - { value: Other, text: Other }
+      match_lead_source:
+        label: Lead source is any of
+        kind: Select
+        multi: true
+        options:
+          options:
+            - { value: Organic search, text: Organic search }
+            - { value: Paid search, text: Paid search }
+            - { value: Organic social, text: Organic social }
+            - { value: Paid social, text: Paid social }
+            - { value: Email marketing, text: Email marketing }
+            - { value: Referral, text: Referral }
+            - { value: Direct traffic, text: Direct traffic }
+            - { value: Event, text: Event }
+            - { value: Offline, text: Offline }
+            - { value: Other, text: Other }
+      match_status:
+        label: Lead status is any of
+        kind: Select
+        multi: true
+        options:
+          options:
+            - { value: New, text: New }
+            - { value: Open, text: Open }
+            - { value: In progress, text: In progress }
+            - { value: Attempted to contact, text: Attempted to contact }
+            - { value: Connected, text: Connected }
+            - { value: Unqualified, text: Unqualified }
+            - { value: Bad timing, text: Bad timing }
+      match_owner:
+        label: Contact owner is any of
+        kind: User
+        multi: true
+      match_country:
+        label: Country is
+        kind: String
+      match_tag:
+        label: Has tag
+        kind: String
+      match_engagement:
+        label: Email engagement
+        kind: Select
+        options:
+          options:
+            - { value: Opened recently, text: Opened an email in the last 30 days }
+            - { value: Clicked recently, text: Clicked an email in the last 30 days }
+            - { value: Never opened, text: Has never opened a marketing email }
+            - { value: Not emailed, text: Has never been sent a marketing email }
+      match_deals:
+        label: Deals
+        kind: Select
+        options:
+          options:
+            - { value: Open deal, text: Has an open deal }
+            - { value: Won deal, text: Has won a deal (customer) }
+            - { value: No deals, text: Has no deals }
+      use_advanced_filter:
+        label: Write the filter myself (advanced)
+        kind: Bool
       filter:
-        label: Filter
+        label: Filter (written automatically from the choices above)
         kind: String
         options:
           multiLine: true

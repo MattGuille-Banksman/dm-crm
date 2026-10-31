@@ -15,8 +15,10 @@ export MSYS_NO_PATHCONV=1
 FORCE=${1:-}
 
 # the CLI prints the value on stderr, mixed with log lines
-get() { { docker compose exec -T server corteza-server settings get "$1" 2>&1 || true; } | { grep -v '"level"' || true; } | tr -d '[:space:]'; }
-set_setting() { docker compose exec -T server corteza-server settings set "$1" "$2" 2>&1 | grep -v '"level"' | grep -v '^$' || true; }
+TOOLS=$(cd "$(dirname "$0")" && pwd)
+. "$TOOLS/target.sh"
+get() { { on_target "cd $COMPOSE_DIR && $DOCKER compose exec -T server corteza-server settings get $(printf %q "$1")" 2>&1 || true; } | { grep -v "\"level\"" || true; } | tr -d "[:space:]"; }
+set_setting() { on_target "cd $COMPOSE_DIR && $DOCKER compose exec -T server corteza-server settings set $(printf %q "$1") $(printf %q "$2")" 2>&1 | grep -v "\"level\"" | grep -v "^$" || true; }
 
 LIGHT='{\"black\":\"#0B1026\",\"white\":\"#FFFFFF\",\"primary\":\"#4F46E5\",\"secondary\":\"#64748B\",\"success\":\"#16A34A\",\"warning\":\"#F59E0B\",\"danger\":\"#DC2626\",\"light\":\"#F5F7FB\",\"extra-light\":\"#E2E8F0\",\"body-bg\":\"#F5F7FB\",\"sidebar-bg\":\"#FFFFFF\",\"topbar-bg\":\"#F5F7FB\"}'
 DARK='{\"black\":\"#F1F5F9\",\"white\":\"#0B1026\",\"primary\":\"#6366F1\",\"secondary\":\"#94A3B8\",\"success\":\"#22C55E\",\"warning\":\"#FBBF24\",\"danger\":\"#EF4444\",\"light\":\"#1E2440\",\"extra-light\":\"#2C3354\",\"body-bg\":\"#0B1026\",\"sidebar-bg\":\"#111735\",\"topbar-bg\":\"#0B1026\"}'

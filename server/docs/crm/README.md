@@ -187,6 +187,24 @@ The template's **HTML code** field is a plain code box: paste your full email
 HTML there. The **Preview** panel next to it renders the HTML in an isolated
 frame; it refreshes when you save.
 
+## AI campaign content
+
+**Generate content with AI** on a campaign (`crm_campaign_generate_content`)
+sends the brief (about, key messages, keywords, call to action, writing
+style, channels) to the Claude API and saves the draft, as HTML, in
+**Generated content**. It drafts one section per selected channel.
+
+- An administrator adds the Anthropic API key once, under Settings > AI
+  settings (key from console.anthropic.com). Model (Opus 5.5 or Sonnet 5.5)
+  and effort are chosen there too.
+- AI settings are admin-only: CRM users get per-module permissions that leave
+  the module out, and signed-in users are denied it with SQL in
+  `update-existing-crm.sh`, because the importer can't resolve the built-in
+  `authenticated` role. The workflow runs as the admin (`run_as`, also set by
+  the script) so CRM users can still use the button.
+- Cost is roughly 5p per draft on Opus 5.5 and about half that on Sonnet 5.5.
+  Set a monthly spend limit in the Anthropic console.
+
 ## Resizable columns
 
 Every record list supports drag-to-resize columns: drag the right edge of a

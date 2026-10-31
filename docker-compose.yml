@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:15
+    restart: unless-stopped
     environment:
       POSTGRES_USER: corteza
       POSTGRES_PASSWORD: corteza
@@ -10,6 +11,7 @@ services:
 
   server:
     image: cortezaproject/corteza:2026.9.0
+    restart: unless-stopped
     depends_on: [db]
     ports:
       - "18080:80"

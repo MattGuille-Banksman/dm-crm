@@ -1,0 +1,9 @@
+{$DOMAIN} {
+	encode gzip
+
+	# open the CRM directly instead of Corteza's start and namespace pages
+	@home path / /compose /compose/ /compose/namespaces
+	redir @home /compose/ns/crm/pages 302
+
+	reverse_proxy server:80
+}

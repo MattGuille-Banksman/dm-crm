@@ -337,7 +337,7 @@ record:
   recordSelectorAddRecordDisplayOption: When adding a record via record selector
 recordList:
   noModule: No module selected
-  addRecord: Add
+  addRecord: Create new
   cancelSelection: Cancel
   customFilter: Custom filter
   prefilter:

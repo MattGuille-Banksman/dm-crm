@@ -7,6 +7,16 @@
 # Assign users to the role in Admin Area > Roles, or with:
 #   corteza-server roles useradd crm-user <email>
 
+#
+# CRM users get access module by module, so the AI settings module (which
+# holds the Anthropic API key) is left out. Signed-in users are denied it
+# outright by branding/tools/update-existing-crm.sh (the importer cannot
+# resolve the built-in authenticated role, so that rule is written with SQL;
+# run the script after a fresh install too). Administrators keep access
+# through their own role, which is
+# checked first. Note that within the main roles a deny wins over an allow,
+# so never deny the CRM user role itself: administrators usually hold it too.
+
 roles:
   crm-user:
     name: CRM user
@@ -23,19 +33,146 @@ allow:
 
     corteza::compose:module/crm/*:
       - read
-      - record.create
-      - records.search
 
     corteza::compose:module-field/crm/*/*:
       - record.value.read
       - record.value.update
 
-    corteza::compose:record/crm/*/*:
+    corteza::automation:workflow/*:
+      - read
+      - execute
+
+    corteza::compose:module/crm/Company:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/Company/*:
       - read
       - update
       - delete
       - revisions.search
 
-    corteza::automation:workflow/*:
+    corteza::compose:module/crm/Contact:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/Contact/*:
       - read
-      - execute
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/ContactAddress:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/ContactAddress/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/DealStage:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/DealStage/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/Deal:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/Deal/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/Activity:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/Activity/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/Note:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/Note/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/EmailTemplate:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/EmailTemplate/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/EmailFolder:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/EmailFolder/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/Campaign:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/Campaign/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/EmailCampaign:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/EmailCampaign/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/CampaignRecipient:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/CampaignRecipient/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/Segment:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/Segment/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/SegmentMember:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/SegmentMember/*:
+      - read
+      - update
+      - delete
+      - revisions.search
+
+    corteza::compose:module/crm/AutomationRun:
+      - record.create
+      - records.search
+    corteza::compose:record/crm/AutomationRun/*:
+      - read
+      - update
+      - delete
+      - revisions.search

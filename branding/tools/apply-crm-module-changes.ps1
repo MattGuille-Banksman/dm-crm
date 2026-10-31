@@ -115,7 +115,58 @@ $segment = Ensure-Module 'Segment' 'Segment' @(
     (F 'added_at' 'DateTime' 'Added at')
 ))
 
+$folder = Ensure-Module 'EmailFolder' 'Email folder' @(
+    (F 'name' 'String' 'Folder name' @{} $true),
+    (F 'description' 'String' 'Description' @{ multiLine = $true }),
+    (F 'owner' 'User' 'Owner' $userOpts)
+)
+
+$campaign = Ensure-Module 'Campaign' 'Campaign' @(
+    (F 'name' 'String' 'Campaign name' @{} $true),
+    (F 'status' 'Select' 'Status' @{ displayType = 'badge'; options = (Opts @('Planning', 'Active', 'Paused', 'Completed')) } $false 'Planning'),
+    (F 'owner' 'User' 'Campaign owner' $userOpts),
+    (F 'start_date' 'DateTime' 'Start date' @{ onlyDate = $true }),
+    (F 'end_date' 'DateTime' 'End date' @{ onlyDate = $true }),
+    (F 'budget' 'Number' 'Budget' @{ precision = 2 }),
+    (F 'audience' 'Record' 'Audience (list)' (RecordOpts $segment.moduleID 'name' @('name'))),
+    (F 'channels' 'Select' 'Channels' @{ options = (Opts @('Email', 'Social media', 'Google Ads', 'Blog', 'Landing page', 'Events')) } $false $null $true),
+    (F 'about' 'String' 'What is your campaign about?' @{ multiLine = $true }),
+    (F 'key_message_1' 'String' 'What do you want your audience to know? (1)'),
+    (F 'key_message_2' 'String' 'What do you want your audience to know? (2)'),
+    (F 'key_message_3' 'String' 'What do you want your audience to know? (3)'),
+    (F 'keywords' 'String' 'Keywords'),
+    (F 'call_to_action' 'String' 'What do you want your audience to do?'),
+    (F 'writing_style' 'Select' 'Writing style' @{ options = (Opts @('Professional', 'Friendly', 'Helpful', 'Persuasive', 'Informative', 'Creative', 'Humorous')) } $false $null $true),
+    (F 'generated_content' 'String' 'Generated content' @{ multiLine = $true; useRichTextEditor = $true }),
+    (F 'notes' 'String' 'Notes' @{ multiLine = $true })
+)
+
+# only administrators can read this module (1050_access_control.yaml)
+[void](Ensure-Module 'AiSettings' 'AI settings' @(
+    (F 'name' 'String' 'Name' @{} $false 'Claude API'),
+    (F 'anthropic_api_key' 'String' 'Anthropic API key'),
+    (F 'model' 'Select' 'Model' @{ options = (Opts @('claude-opus-5-5', 'claude-sonnet-5-5') @{ 'claude-opus-5-5' = 'Claude Opus 5.5 (best quality)'; 'claude-sonnet-5-5' = 'Claude Sonnet 5.5 (about half the cost)' }) } $false 'claude-opus-5-5'),
+    (F 'effort' 'Select' 'Effort' @{ options = (Opts @('low', 'medium', 'high') @{ low = 'Low (fastest, cheapest)'; medium = 'Medium (recommended)'; high = 'High (most thorough)' }) } $false 'medium')
+))
+
 # --- existing modules --------------------------------------------------------
+$lifecycleTexts = @{ MQL = 'Marketing qualified lead'; SQL = 'Sales qualified lead' }
+Update-Module 'Segment' @(
+    (F 'match_lifecycle' 'Select' 'Lifecycle stage is any of' @{ options = (Opts @('Subscriber', 'Lead', 'MQL', 'SQL', 'Opportunity', 'Customer', 'Evangelist', 'Other') $lifecycleTexts) } $false $null $true),
+    (F 'match_lead_source' 'Select' 'Lead source is any of' @{ options = (Opts @('Organic search', 'Paid search', 'Organic social', 'Paid social', 'Email marketing', 'Referral', 'Direct traffic', 'Event', 'Offline', 'Other')) } $false $null $true),
+    (F 'match_status' 'Select' 'Lead status is any of' @{ options = (Opts @('New', 'Open', 'In progress', 'Attempted to contact', 'Connected', 'Unqualified', 'Bad timing')) } $false $null $true),
+    (F 'match_owner' 'User' 'Contact owner is any of' @{} $false $null $true),
+    (F 'match_country' 'String' 'Country is'),
+    (F 'match_tag' 'String' 'Has tag'),
+    (F 'match_engagement' 'Select' 'Email engagement' @{ options = (Opts @('Opened recently', 'Clicked recently', 'Never opened', 'Not emailed') @{ 'Opened recently' = 'Opened an email in the last 30 days'; 'Clicked recently' = 'Clicked an email in the last 30 days'; 'Never opened' = 'Has never opened a marketing email'; 'Not emailed' = 'Has never been sent a marketing email' }) }),
+    (F 'match_deals' 'Select' 'Deals' @{ options = (Opts @('Open deal', 'Won deal', 'No deals') @{ 'Open deal' = 'Has an open deal'; 'Won deal' = 'Has won a deal (customer)'; 'No deals' = 'Has no deals' }) }),
+    (F 'use_advanced_filter' 'Bool' 'Write the filter myself (advanced)')
+) {
+    param($mod)
+    $filter = $mod.fields | Where-Object { $_.name -eq 'filter' }
+    $filter.label = 'Filter (written automatically from the choices above)'
+}
+
 Update-Module 'Company' @(
     (F 'domain' 'String' 'Email domain')
 )
@@ -137,7 +188,8 @@ Update-Module 'Contact' @(
 )
 
 Update-Module 'EmailTemplate' @(
-    (F 'preview_url' 'String' 'Preview URL')
+    (F 'preview_url' 'String' 'Preview URL'),
+    (F 'folder' 'Record' 'Folder' (RecordOpts $folder.moduleID 'name' @('name')))
 ) {
     param($mod)
     $html = $mod.fields | Where-Object { $_.name -eq 'body_html' }
@@ -148,9 +200,18 @@ Update-Module 'EmailTemplate' @(
 }
 
 Update-Module 'EmailCampaign' @(
-    (F 'segment' 'Record' 'Audience segment' (RecordOpts $segment.moduleID 'name' @('name')))
+    (F 'segment' 'Record' 'Audience segment' (RecordOpts $segment.moduleID 'name' @('name'))),
+    (F 'folder' 'Record' 'Folder' (RecordOpts $folder.moduleID 'name' @('name'))),
+    (F 'campaign' 'Record' 'Campaign' (RecordOpts $campaign.moduleID 'name' @('name')))
 ) {
     param($mod)
+    # an email, which can belong to a campaign
+    $mod.name = 'Email'
+    ($mod.fields | Where-Object { $_.name -eq 'name' }).label = 'Email name'
+    $status = $mod.fields | Where-Object { $_.name -eq 'status' }
+    if (-not ($status.options.options | Where-Object { $_.value -eq 'Archived' })) {
+        $status.options.options = @($status.options.options) + [pscustomobject]@{ value = 'Archived'; text = 'Archived' }
+    }
     $aq = $mod.fields | Where-Object { $_.name -eq 'audience_query' }
     $aq.label = 'Extra audience filter (advanced, optional)'
     $aq.defaultValue = @()

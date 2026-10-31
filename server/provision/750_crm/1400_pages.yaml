@@ -2,11 +2,13 @@
 #
 # Notes on the format:
 # - Pages are only rendered through a page layout; each layout lists the
-#   blocks it shows (by blockID) and where. Block IDs are page-local and
-#   numbered from 1 in the order the blocks are defined.
-# - The grid is 48 columns wide.
-# - Record list prefilters can use ${recordID} (current record on a record
-#   page) and ${userID} (current user).
+#   blocks it shows (by blockID) and where. Block IDs are page-local.
+# - Blocks shown inside a Tabs block are defined on the page but left out of
+#   the layout; the Tabs block references them by blockID.
+# - The grid is 48 columns wide and every row is 10px tall, so h: 75 is a
+#   750px block. Lists need room for their toolbar, search and pagination.
+# - Record list prefilters can use ${recordID}, ${userID} and the current
+#   record (${record.values.company}); they are JavaScript template strings.
 # - Record pages (pages with a "module") are hidden from navigation and are
 #   placed under the list page of the same module.
 
@@ -22,7 +24,7 @@ pages:
       - blockid: 1
         title: Open pipeline
         kind: Metric
-        xywh: [0, 0, 12, 6]
+        xywh: [0, 0, 12, 14]
         options:
           metrics:
             - label: Open pipeline
@@ -35,7 +37,7 @@ pages:
       - blockid: 2
         title: Weighted forecast
         kind: Metric
-        xywh: [12, 0, 12, 6]
+        xywh: [12, 0, 12, 14]
         options:
           metrics:
             - label: Weighted forecast
@@ -48,7 +50,7 @@ pages:
       - blockid: 3
         title: Won this year
         kind: Metric
-        xywh: [24, 0, 12, 6]
+        xywh: [24, 0, 12, 14]
         options:
           metrics:
             - label: Won revenue (this year)
@@ -61,7 +63,7 @@ pages:
       - blockid: 4
         title: New leads (30 days)
         kind: Metric
-        xywh: [36, 0, 12, 6]
+        xywh: [36, 0, 12, 14]
         options:
           metrics:
             - label: New leads (30 days)
@@ -72,7 +74,7 @@ pages:
       - blockid: 5
         title: My open tasks
         kind: RecordList
-        xywh: [0, 6, 24, 16]
+        xywh: [0, 14, 24, 45]
         options:
           module: Activity
           prefilter: "owner = ${userID} AND status = 'Planned'"
@@ -87,13 +89,13 @@ pages:
       - blockid: 6
         title: Open pipeline by stage
         kind: Chart
-        xywh: [24, 6, 24, 16]
+        xywh: [24, 14, 24, 45]
         options:
           chart: CrmOpenPipelineByStage
       - blockid: 7
         title: My deals closing soon
         kind: RecordList
-        xywh: [0, 22, 24, 16]
+        xywh: [0, 59, 24, 45]
         options:
           module: Deal
           prefilter: "owner = ${userID} AND stage != 'Won' AND stage != 'Lost'"
@@ -108,7 +110,7 @@ pages:
       - blockid: 8
         title: Recently added contacts
         kind: RecordList
-        xywh: [24, 22, 24, 16]
+        xywh: [24, 59, 24, 45]
         options:
           module: Contact
           presort: createdAt DESC
@@ -126,14 +128,14 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 12, 6] }
-          - { blockID: 2, xywh: [12, 0, 12, 6] }
-          - { blockID: 3, xywh: [24, 0, 12, 6] }
-          - { blockID: 4, xywh: [36, 0, 12, 6] }
-          - { blockID: 5, xywh: [0, 6, 24, 16] }
-          - { blockID: 6, xywh: [24, 6, 24, 16] }
-          - { blockID: 7, xywh: [0, 22, 24, 16] }
-          - { blockID: 8, xywh: [24, 22, 24, 16] }
+          - { blockID: 1, xywh: [0, 0, 12, 14] }
+          - { blockID: 2, xywh: [12, 0, 12, 14] }
+          - { blockID: 3, xywh: [24, 0, 12, 14] }
+          - { blockID: 4, xywh: [36, 0, 12, 14] }
+          - { blockID: 5, xywh: [0, 14, 24, 45] }
+          - { blockID: 6, xywh: [24, 14, 24, 45] }
+          - { blockID: 7, xywh: [0, 59, 24, 45] }
+          - { blockID: 8, xywh: [24, 59, 24, 45] }
 
   # ===========================================================================
   CrmContacts:
@@ -144,11 +146,13 @@ pages:
       - blockid: 1
         title: Contacts
         kind: RecordList
-        xywh: [0, 0, 48, 30]
+        xywh: [0, 0, 48, 75]
         options:
           module: Contact
           presort: createdAt DESC
           perPage: 25
+          showRecordPerPageOption: true
+          showTotalCount: true
           allowExport: true
           selectable: true
           bulkRecordEditEnabled: true
@@ -169,18 +173,62 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 48, 30] }
+          - { blockID: 1, xywh: [0, 0, 48, 75] }
     pages:
 
+      # Contact card, HubSpot style: details on the left, activity in the
+      # middle, associations on the right
       RecordContact:
         title: Contact
         module: Contact
         visible: false
         blocks:
+          # --- left: who they are ------------------------------------------
           - blockid: 1
+            title: Contact
+            kind: Record
+            xywh: [0, 0, 13, 52]
+            options:
+              fields:
+                - name: full_name
+                - name: email
+                - name: phone
+                - name: job_title
+                - name: company
+          - blockid: 2
+            kind: Automation
+            xywh: [0, 52, 13, 14]
+            options:
+              buttons:
+                - label: Note
+                  resourceType: compose:record
+                  workflow: crm_contact_quick_note
+                  stepID: 10
+                  variant: light
+                - label: Email
+                  resourceType: compose:record
+                  workflow: crm_contact_quick_email
+                  stepID: 10
+                  variant: light
+                - label: Call
+                  resourceType: compose:record
+                  workflow: crm_contact_quick_call
+                  stepID: 10
+                  variant: light
+                - label: Task
+                  resourceType: compose:record
+                  workflow: crm_contact_quick_task
+                  stepID: 10
+                  variant: light
+                - label: Meeting
+                  resourceType: compose:record
+                  workflow: crm_contact_quick_meeting
+                  stepID: 10
+                  variant: light
+          - blockid: 3
             title: About this contact
             kind: Record
-            xywh: [0, 0, 16, 40]
+            xywh: [0, 66, 13, 170]
             options:
               fields:
                 - name: first_name
@@ -201,13 +249,104 @@ pages:
                 - name: unsubscribed_at
                 - name: last_activity_at
                 - name: properties
-          - blockid: 2
-            title: Activity timeline
+          # --- middle: activity tabs ---------------------------------------
+          - blockid: 4
+            kind: Tabs
+            xywh: [13, 0, 23, 150]
+            options:
+              style:
+                appearance: tabs
+                alignment: left
+                justify: none
+                orientation: horizontal
+                position: start
+              tabs:
+                - { blockID: "10", title: Activity }
+                - { blockID: "11", title: Notes }
+                - { blockID: "12", title: Emails }
+                - { blockID: "13", title: Calls }
+                - { blockID: "14", title: Tasks }
+                - { blockID: "15", title: Meetings }
+                - { blockID: "16", title: Marketing emails }
+          # --- right: associations -----------------------------------------
+          - blockid: 5
+            title: Company
             kind: RecordList
-            xywh: [16, 0, 32, 20]
+            xywh: [36, 0, 12, 20]
+            options:
+              module: Company
+              prefilter: "${record.values.company ? 'recordID = ' + record.values.company : 'recordID = 0'}"
+              hideAddButton: true
+              hideSearch: true
+              hidePaging: true
+              showTotalCount: false
+              selectable: false
+              fields:
+                - name: name
+                - name: domain
+          - blockid: 6
+            title: Deals
+            kind: RecordList
+            xywh: [36, 20, 12, 28]
+            options:
+              module: Deal
+              refField: contact
+              presort: createdAt DESC
+              hideSearch: true
+              selectable: false
+              perPage: 5
+              fields:
+                - name: name
+                - name: stage
+                - name: amount
+          - blockid: 7
+            title: Lists
+            kind: RecordList
+            xywh: [36, 48, 12, 22]
+            options:
+              module: SegmentMember
+              refField: contact
+              presort: createdAt DESC
+              hideSearch: true
+              selectable: false
+              perPage: 5
+              fields:
+                - name: segment
+                - name: added_at
+          - blockid: 8
+            title: Addresses
+            kind: RecordList
+            xywh: [36, 70, 12, 20]
+            options:
+              module: ContactAddress
+              refField: contact
+              hideSearch: true
+              selectable: false
+              perPage: 5
+              fields:
+                - name: address_type
+                - name: city
+                - name: country
+          - blockid: 9
+            title: Deals and engagement
+            kind: Record
+            xywh: [36, 90, 12, 62]
+            options:
+              fields:
+                - name: open_deals_count
+                - name: open_pipeline
+                - name: won_revenue
+                - name: emails_opened_count
+                - name: last_email_opened_at
+                - name: last_email_clicked_at
+          # --- tab contents (not in the layout) ----------------------------
+          - blockid: 10
+            title: Activity
+            kind: RecordList
+            xywh: [0, 0, 24, 60]
             options:
               module: Activity
-              prefilter: "contact = ${recordID}"
+              refField: contact
               presort: createdAt DESC
               perPage: 10
               fields:
@@ -217,87 +356,96 @@ pages:
                 - name: due_at
                 - name: occurred_at
                 - name: owner
-          - blockid: 3
+          - blockid: 11
             title: Notes
             kind: RecordList
-            xywh: [16, 20, 32, 20]
+            xywh: [0, 0, 24, 60]
             options:
               module: Note
-              prefilter: "contact = ${recordID}"
+              refField: contact
               presort: createdAt DESC
               perPage: 10
               fields:
                 - name: title
                 - name: body
                 - name: pinned
-          - blockid: 4
-            title: Deals
+          - blockid: 12
+            title: Emails
             kind: RecordList
-            xywh: [0, 40, 24, 14]
+            xywh: [0, 0, 24, 60]
             options:
-              module: Deal
-              prefilter: "contact = ${recordID}"
+              module: Activity
+              refField: contact
+              prefilter: "activity_type = 'Email'"
               presort: createdAt DESC
+              perPage: 10
               fields:
-                - name: name
-                - name: stage
-                - name: amount
-                - name: close_date
-          - blockid: 5
-            title: Addresses
+                - name: subject
+                - name: direction
+                - name: occurred_at
+                - name: owner
+          - blockid: 13
+            title: Calls
             kind: RecordList
-            xywh: [24, 40, 24, 14]
+            xywh: [0, 0, 24, 60]
             options:
-              module: ContactAddress
-              prefilter: "contact = ${recordID}"
+              module: Activity
+              refField: contact
+              prefilter: "activity_type = 'Call'"
+              presort: createdAt DESC
+              perPage: 10
               fields:
-                - name: address_type
-                - name: line1
-                - name: city
-                - name: country
-          - blockid: 6
-            title: Email history
+                - name: subject
+                - name: status
+                - name: due_at
+                - name: duration_minutes
+                - name: owner
+          - blockid: 14
+            title: Tasks
             kind: RecordList
-            xywh: [0, 54, 48, 14]
+            xywh: [0, 0, 24, 60]
+            options:
+              module: Activity
+              refField: contact
+              prefilter: "activity_type = 'Task'"
+              presort: due_at ASC
+              perPage: 10
+              fields:
+                - name: subject
+                - name: status
+                - name: due_at
+                - name: owner
+          - blockid: 15
+            title: Meetings
+            kind: RecordList
+            xywh: [0, 0, 24, 60]
+            options:
+              module: Activity
+              refField: contact
+              prefilter: "activity_type = 'Meeting'"
+              presort: due_at DESC
+              perPage: 10
+              fields:
+                - name: subject
+                - name: status
+                - name: due_at
+                - name: owner
+          - blockid: 16
+            title: Marketing emails
+            kind: RecordList
+            xywh: [0, 0, 24, 60]
             options:
               module: CampaignRecipient
-              prefilter: "contact = ${recordID}"
+              refField: contact
               presort: createdAt DESC
               hideAddButton: true
+              perPage: 10
               fields:
                 - name: campaign
                 - name: status
                 - name: sent_at
                 - name: opened_at
                 - name: clicked_at
-          - blockid: 7
-            title: Deals and engagement
-            kind: Record
-            xywh: [0, 68, 24, 22]
-            options:
-              fields:
-                - name: deals_count
-                - name: open_deals_count
-                - name: won_deals_count
-                - name: open_pipeline
-                - name: won_revenue
-                - name: emails_sent_count
-                - name: emails_opened_count
-                - name: emails_clicked_count
-                - name: last_email_opened_at
-                - name: last_email_clicked_at
-          - blockid: 8
-            title: Static lists
-            kind: RecordList
-            xywh: [24, 68, 24, 22]
-            options:
-              module: SegmentMember
-              prefilter: "contact = ${recordID}"
-              presort: createdAt DESC
-              fields:
-                - name: segment
-                - name: source
-                - name: added_at
         page_layouts:
           RecordContactDefault:
             primary: true
@@ -312,14 +460,15 @@ pages:
                 clone: { enabled: true }
                 back: { enabled: true }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 16, 40] }
-              - { blockID: 2, xywh: [16, 0, 32, 20] }
-              - { blockID: 3, xywh: [16, 20, 32, 20] }
-              - { blockID: 4, xywh: [0, 40, 24, 14] }
-              - { blockID: 5, xywh: [24, 40, 24, 14] }
-              - { blockID: 6, xywh: [0, 54, 48, 14] }
-              - { blockID: 7, xywh: [0, 68, 24, 22] }
-              - { blockID: 8, xywh: [24, 68, 24, 22] }
+              - { blockID: 1, xywh: [0, 0, 13, 52] }
+              - { blockID: 2, xywh: [0, 52, 13, 14] }
+              - { blockID: 3, xywh: [0, 66, 13, 170] }
+              - { blockID: 4, xywh: [13, 0, 23, 150] }
+              - { blockID: 5, xywh: [36, 0, 12, 20] }
+              - { blockID: 6, xywh: [36, 20, 12, 28] }
+              - { blockID: 7, xywh: [36, 48, 12, 22] }
+              - { blockID: 8, xywh: [36, 70, 12, 20] }
+              - { blockID: 9, xywh: [36, 90, 12, 62] }
 
       RecordContactAddress:
         title: Contact address
@@ -329,7 +478,7 @@ pages:
           - blockid: 1
             title: Address
             kind: Record
-            xywh: [0, 0, 24, 24]
+            xywh: [0, 0, 24, 80]
             options:
               fields:
                 - name: contact
@@ -354,7 +503,7 @@ pages:
                 clone: { enabled: true }
                 back: { enabled: true }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 24, 24] }
+              - { blockID: 1, xywh: [0, 0, 24, 80] }
 
       # -----------------------------------------------------------------------
       # Lists (segments), HubSpot style
@@ -366,11 +515,12 @@ pages:
           - blockid: 1
             title: Lists
             kind: RecordList
-            xywh: [0, 0, 48, 24]
+            xywh: [0, 14, 48, 70]
             options:
               module: Segment
               presort: name ASC
               perPage: 25
+              showRecordPerPageOption: true
               fields:
                 - name: name
                 - name: list_type
@@ -381,7 +531,7 @@ pages:
           - blockid: 2
             title: How lists work
             kind: Content
-            xywh: [0, 24, 48, 8]
+            xywh: [0, 0, 48, 14]
             options:
               body: >-
                 <p><b>Active</b> lists update automatically: anyone matching the filter is in the list.
@@ -394,8 +544,8 @@ pages:
             config:
               visibility: { expression: "" }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 48, 24] }
-              - { blockID: 2, xywh: [0, 24, 48, 8] }
+              - { blockID: 2, xywh: [0, 0, 48, 14] }
+              - { blockID: 1, xywh: [0, 14, 48, 70] }
         pages:
           RecordSegment:
             title: List
@@ -405,21 +555,36 @@ pages:
               - blockid: 1
                 title: List
                 kind: Record
-                xywh: [0, 0, 20, 30]
+                xywh: [0, 0, 20, 71]
                 options:
                   fields:
                     - name: name
                     - name: list_type
-                    - name: filter
                     - name: category
                     - name: description
                     - name: owner
                     - name: contact_count
                     - name: last_refreshed_at
+              - blockid: 6
+                title: Who is in this list
+                kind: Record
+                xywh: [0, 71, 20, 98]
+                options:
+                  fields:
+                    - name: match_lifecycle
+                    - name: match_lead_source
+                    - name: match_status
+                    - name: match_owner
+                    - name: match_country
+                    - name: match_tag
+                    - name: match_engagement
+                    - name: match_deals
+                    - name: use_advanced_filter
+                    - name: filter
               - blockid: 2
                 title: Actions
                 kind: Automation
-                xywh: [20, 0, 28, 5]
+                xywh: [20, 0, 28, 14]
                 options:
                   buttons:
                     - label: Refresh count
@@ -432,57 +597,50 @@ pages:
                       workflow: crm_segment_snapshot
                       stepID: 10
                       variant: light
-              - blockid: 3
-                title: Filter cheat sheet
-                kind: Content
-                xywh: [20, 5, 28, 25]
-                options:
-                  body: >-
-                    <p>Combine conditions with <code>AND</code>, <code>OR</code> and brackets. Text goes in single quotes.</p>
-                    <ul>
-                    <li>Lifecycle: <code>lifecycle_stage = 'Lead'</code>,
-                    <code>lifecycle_stage IN ('MQL', 'SQL')</code></li>
-                    <li>Source and owner: <code>lead_source = 'Event'</code>, <code>owner = ${userID}</code></li>
-                    <li>Text match: <code>job_title LIKE '%Director%'</code>, <code>email_domain = 'acme.com'</code>,
-                    <code>country = 'United Kingdom'</code></li>
-                    <li>Tags: <code>tags = 'vip'</code></li>
-                    <li>Email engagement: <code>emails_opened_count &gt; 0</code>,
-                    <code>last_email_clicked_at &gt;= DATE_SUB(NOW(), INTERVAL 30 DAY)</code>,
-                    <code>emails_sent_count &gt; 3 AND NOT (emails_opened_count &gt; 0)</code></li>
-                    <li>Deals: <code>open_deals_count &gt; 0</code>, <code>won_revenue &gt;= 10000</code>,
-                    <code>deals_count IS NULL</code> (never had a deal)</li>
-                    <li>Activity and dates: <code>last_activity_at &lt; DATE_SUB(NOW(), INTERVAL 90 DAY)</code>,
-                    <code>createdAt &gt;= DATE_SUB(NOW(), INTERVAL 7 DAY)</code></li>
-                    </ul>
-                    <p>Unsubscribed contacts are always skipped when a campaign is sent.</p>
-                    <p>Tip: on the Contacts page use the filter icon on any column to explore,
-                    then copy the conditions here. Leave the filter empty to include every contact.</p>
               - blockid: 4
-                title: Matching contacts (live filter)
+                title: Contacts in this list right now
                 kind: RecordList
-                xywh: [0, 30, 48, 24]
+                xywh: [20, 14, 28, 90]
                 options:
                   module: Contact
                   prefilter: "${record.values.filter || ''}"
                   presort: createdAt DESC
                   perPage: 25
+                  showRecordPerPageOption: true
+                  showTotalCount: true
                   hideAddButton: true
                   fields:
                     - name: full_name
                     - name: email
                     - name: company
                     - name: lifecycle_stage
-                    - name: lead_source
                     - name: owner
+              - blockid: 3
+                title: How to choose who is in the list
+                kind: Content
+                xywh: [20, 104, 28, 65]
+                options:
+                  body: >-
+                    <p>Pick the options under <b>Who is in this list</b> and click <b>Save</b>.
+                    Empty options mean "any", so a list with nothing chosen contains <b>every contact</b>.
+                    Choosing several values in one option means "any of these"; different options must all match.</p>
+                    <p><b>Active</b> lists update by themselves. <b>Static</b> lists keep a fixed set of people:
+                    click <b>Save snapshot</b> to add everyone who matches now, or add people by hand below.</p>
+                    <p><b>Advanced:</b> tick <i>Write the filter myself</i> to type your own filter, for example
+                    <code>job_title LIKE '%Director%' AND lifecycle_stage = 'Lead'</code>,
+                    <code>won_revenue &gt;= 10000</code> or
+                    <code>last_activity_at &lt; DATE_SUB(NOW(), INTERVAL 90 DAY)</code>.
+                    Text goes in single quotes; combine with <code>AND</code>, <code>OR</code> and brackets.</p>
               - blockid: 5
                 title: Saved members (static lists)
                 kind: RecordList
-                xywh: [0, 54, 48, 20]
+                xywh: [0, 169, 48, 50]
                 options:
                   module: SegmentMember
-                  prefilter: "segment = ${recordID}"
+                  refField: segment
                   presort: createdAt DESC
                   perPage: 25
+                  showRecordPerPageOption: true
                   fields:
                     - name: contact
                     - name: source
@@ -501,11 +659,12 @@ pages:
                     clone: { enabled: true }
                     back: { enabled: true }
                 blocks:
-                  - { blockID: 1, xywh: [0, 0, 20, 30] }
-                  - { blockID: 2, xywh: [20, 0, 28, 5] }
-                  - { blockID: 3, xywh: [20, 5, 28, 25] }
-                  - { blockID: 4, xywh: [0, 30, 48, 24] }
-                  - { blockID: 5, xywh: [0, 54, 48, 20] }
+                  - { blockID: 1, xywh: [0, 0, 20, 71] }
+                  - { blockID: 6, xywh: [0, 71, 20, 98] }
+                  - { blockID: 2, xywh: [20, 0, 28, 14] }
+                  - { blockID: 4, xywh: [20, 14, 28, 90] }
+                  - { blockID: 3, xywh: [20, 104, 28, 65] }
+                  - { blockID: 5, xywh: [0, 169, 48, 50] }
 
           RecordSegmentMember:
             title: List member
@@ -515,7 +674,7 @@ pages:
               - blockid: 1
                 title: List member
                 kind: Record
-                xywh: [0, 0, 24, 18]
+                xywh: [0, 0, 24, 44]
                 options:
                   fields:
                     - name: segment
@@ -536,7 +695,7 @@ pages:
                     clone: { enabled: true }
                     back: { enabled: true }
                 blocks:
-                  - { blockID: 1, xywh: [0, 0, 24, 18] }
+                  - { blockID: 1, xywh: [0, 0, 24, 44] }
 
   # ===========================================================================
   CrmCompanies:
@@ -547,15 +706,17 @@ pages:
       - blockid: 1
         title: Companies
         kind: RecordList
-        xywh: [0, 0, 48, 30]
+        xywh: [0, 0, 48, 75]
         options:
           module: Company
           presort: name ASC
           perPage: 25
+          showRecordPerPageOption: true
+          showTotalCount: true
           allowExport: true
           fields:
             - name: name
-            - name: website
+            - name: domain
             - name: industry
             - name: company_size
             - name: city
@@ -569,7 +730,7 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 48, 30] }
+          - { blockID: 1, xywh: [0, 0, 48, 75] }
     pages:
 
       RecordCompany:
@@ -580,7 +741,7 @@ pages:
           - blockid: 1
             title: About this company
             kind: Record
-            xywh: [0, 0, 16, 36]
+            xywh: [0, 0, 13, 145]
             options:
               fields:
                 - name: name
@@ -599,52 +760,71 @@ pages:
                 - name: last_activity_at
                 - name: properties
           - blockid: 2
+            kind: Tabs
+            xywh: [13, 0, 23, 145]
+            options:
+              style:
+                appearance: tabs
+                alignment: left
+                justify: none
+                orientation: horizontal
+                position: start
+              tabs:
+                - { blockID: "10", title: Activity }
+                - { blockID: "11", title: Notes }
+          - blockid: 3
             title: Contacts
             kind: RecordList
-            xywh: [16, 0, 32, 12]
+            xywh: [36, 0, 12, 72]
             options:
               module: Contact
-              prefilter: "company = ${recordID}"
+              refField: company
+              presort: full_name ASC
+              hideSearch: true
+              selectable: false
+              perPage: 10
               fields:
                 - name: full_name
-                - name: email
                 - name: job_title
-                - name: lifecycle_stage
-          - blockid: 3
+          - blockid: 4
             title: Deals
             kind: RecordList
-            xywh: [16, 12, 32, 12]
+            xywh: [36, 72, 12, 73]
             options:
               module: Deal
-              prefilter: "company = ${recordID}"
+              refField: company
+              presort: createdAt DESC
+              hideSearch: true
+              selectable: false
+              perPage: 10
               fields:
                 - name: name
                 - name: stage
                 - name: amount
-                - name: close_date
-                - name: owner
-          - blockid: 4
-            title: Activity timeline
+          - blockid: 10
+            title: Activity
             kind: RecordList
-            xywh: [16, 24, 32, 12]
+            xywh: [0, 0, 24, 60]
             options:
               module: Activity
-              prefilter: "company = ${recordID}"
+              refField: company
               presort: createdAt DESC
+              perPage: 10
               fields:
                 - name: activity_type
                 - name: subject
                 - name: status
                 - name: contact
                 - name: occurred_at
-          - blockid: 5
+          - blockid: 11
             title: Notes
             kind: RecordList
-            xywh: [0, 36, 48, 12]
+            xywh: [0, 0, 24, 60]
             options:
               module: Note
-              prefilter: "company = ${recordID}"
+              refField: company
               presort: createdAt DESC
+              perPage: 10
               fields:
                 - name: title
                 - name: body
@@ -663,11 +843,10 @@ pages:
                 clone: { enabled: true }
                 back: { enabled: true }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 16, 36] }
-              - { blockID: 2, xywh: [16, 0, 32, 12] }
-              - { blockID: 3, xywh: [16, 12, 32, 12] }
-              - { blockID: 4, xywh: [16, 24, 32, 12] }
-              - { blockID: 5, xywh: [0, 36, 48, 12] }
+              - { blockID: 1, xywh: [0, 0, 13, 145] }
+              - { blockID: 2, xywh: [13, 0, 23, 145] }
+              - { blockID: 3, xywh: [36, 0, 12, 72] }
+              - { blockID: 4, xywh: [36, 72, 12, 73] }
 
   # ===========================================================================
   # Kanban board: one RecordOrganizer column per stage, grouped by Deal.stage.
@@ -681,7 +860,7 @@ pages:
       - blockid: 1
         title: Open pipeline
         kind: Metric
-        xywh: [0, 0, 16, 5]
+        xywh: [0, 0, 16, 14]
         options:
           metrics:
             - label: Open pipeline
@@ -694,7 +873,7 @@ pages:
       - blockid: 2
         title: Weighted forecast
         kind: Metric
-        xywh: [16, 0, 16, 5]
+        xywh: [16, 0, 16, 14]
         options:
           metrics:
             - label: Weighted forecast
@@ -707,7 +886,7 @@ pages:
       - blockid: 3
         title: Open deals
         kind: Metric
-        xywh: [32, 0, 16, 5]
+        xywh: [32, 0, 16, 14]
         options:
           metrics:
             - label: Open deals
@@ -718,7 +897,7 @@ pages:
       - blockid: 4
         title: New
         kind: RecordOrganizer
-        xywh: [0, 5, 8, 40]
+        xywh: [0, 14, 8, 80]
         options:
           module: Deal
           labelField: name
@@ -729,7 +908,7 @@ pages:
       - blockid: 5
         title: Qualified
         kind: RecordOrganizer
-        xywh: [8, 5, 8, 40]
+        xywh: [8, 14, 8, 80]
         options:
           module: Deal
           labelField: name
@@ -740,7 +919,7 @@ pages:
       - blockid: 6
         title: Proposal
         kind: RecordOrganizer
-        xywh: [16, 5, 8, 40]
+        xywh: [16, 14, 8, 80]
         options:
           module: Deal
           labelField: name
@@ -751,7 +930,7 @@ pages:
       - blockid: 7
         title: Negotiation
         kind: RecordOrganizer
-        xywh: [24, 5, 8, 40]
+        xywh: [24, 14, 8, 80]
         options:
           module: Deal
           labelField: name
@@ -762,7 +941,7 @@ pages:
       - blockid: 8
         title: Won
         kind: RecordOrganizer
-        xywh: [32, 5, 8, 40]
+        xywh: [32, 14, 8, 80]
         options:
           module: Deal
           labelField: name
@@ -773,7 +952,7 @@ pages:
       - blockid: 9
         title: Lost
         kind: RecordOrganizer
-        xywh: [40, 5, 8, 40]
+        xywh: [40, 14, 8, 80]
         options:
           module: Deal
           labelField: name
@@ -788,15 +967,15 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 16, 5] }
-          - { blockID: 2, xywh: [16, 0, 16, 5] }
-          - { blockID: 3, xywh: [32, 0, 16, 5] }
-          - { blockID: 4, xywh: [0, 5, 8, 40] }
-          - { blockID: 5, xywh: [8, 5, 8, 40] }
-          - { blockID: 6, xywh: [16, 5, 8, 40] }
-          - { blockID: 7, xywh: [24, 5, 8, 40] }
-          - { blockID: 8, xywh: [32, 5, 8, 40] }
-          - { blockID: 9, xywh: [40, 5, 8, 40] }
+          - { blockID: 1, xywh: [0, 0, 16, 14] }
+          - { blockID: 2, xywh: [16, 0, 16, 14] }
+          - { blockID: 3, xywh: [32, 0, 16, 14] }
+          - { blockID: 4, xywh: [0, 14, 8, 80] }
+          - { blockID: 5, xywh: [8, 14, 8, 80] }
+          - { blockID: 6, xywh: [16, 14, 8, 80] }
+          - { blockID: 7, xywh: [24, 14, 8, 80] }
+          - { blockID: 8, xywh: [32, 14, 8, 80] }
+          - { blockID: 9, xywh: [40, 14, 8, 80] }
 
   # ===========================================================================
   CrmDeals:
@@ -807,11 +986,13 @@ pages:
       - blockid: 1
         title: Deals
         kind: RecordList
-        xywh: [0, 0, 48, 30]
+        xywh: [0, 0, 48, 75]
         options:
           module: Deal
           presort: close_date ASC
           perPage: 25
+          showRecordPerPageOption: true
+          showTotalCount: true
           allowExport: true
           fields:
             - name: name
@@ -830,7 +1011,7 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 48, 30] }
+          - { blockID: 1, xywh: [0, 0, 48, 75] }
     pages:
 
       RecordDeal:
@@ -841,7 +1022,7 @@ pages:
           - blockid: 1
             title: About this deal
             kind: Record
-            xywh: [0, 0, 16, 40]
+            xywh: [0, 0, 13, 145]
             options:
               fields:
                 - name: name
@@ -855,34 +1036,75 @@ pages:
                 - name: deal_type
                 - name: priority
                 - name: lead_source
-                - name: contact
-                - name: company
                 - name: owner
                 - name: lost_reason
                 - name: description
                 - name: properties
           - blockid: 2
-            title: Activity timeline
+            kind: Tabs
+            xywh: [13, 0, 23, 145]
+            options:
+              style:
+                appearance: tabs
+                alignment: left
+                justify: none
+                orientation: horizontal
+                position: start
+              tabs:
+                - { blockID: "10", title: Activity }
+                - { blockID: "11", title: Notes }
+          - blockid: 3
+            title: Contact
             kind: RecordList
-            xywh: [16, 0, 32, 20]
+            xywh: [36, 0, 12, 20]
+            options:
+              module: Contact
+              prefilter: "${record.values.contact ? 'recordID = ' + record.values.contact : 'recordID = 0'}"
+              hideAddButton: true
+              hideSearch: true
+              hidePaging: true
+              selectable: false
+              fields:
+                - name: full_name
+                - name: email
+          - blockid: 4
+            title: Company
+            kind: RecordList
+            xywh: [36, 20, 12, 20]
+            options:
+              module: Company
+              prefilter: "${record.values.company ? 'recordID = ' + record.values.company : 'recordID = 0'}"
+              hideAddButton: true
+              hideSearch: true
+              hidePaging: true
+              selectable: false
+              fields:
+                - name: name
+                - name: domain
+          - blockid: 10
+            title: Activity
+            kind: RecordList
+            xywh: [0, 0, 24, 60]
             options:
               module: Activity
-              prefilter: "deal = ${recordID}"
+              refField: deal
               presort: createdAt DESC
+              perPage: 10
               fields:
                 - name: activity_type
                 - name: subject
                 - name: status
                 - name: due_at
                 - name: owner
-          - blockid: 3
+          - blockid: 11
             title: Notes
             kind: RecordList
-            xywh: [16, 20, 32, 20]
+            xywh: [0, 0, 24, 60]
             options:
               module: Note
-              prefilter: "deal = ${recordID}"
+              refField: deal
               presort: createdAt DESC
+              perPage: 10
               fields:
                 - name: title
                 - name: body
@@ -901,9 +1123,10 @@ pages:
                 clone: { enabled: true }
                 back: { enabled: true }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 16, 40] }
-              - { blockID: 2, xywh: [16, 0, 32, 20] }
-              - { blockID: 3, xywh: [16, 20, 32, 20] }
+              - { blockID: 1, xywh: [0, 0, 13, 145] }
+              - { blockID: 2, xywh: [13, 0, 23, 145] }
+              - { blockID: 3, xywh: [36, 0, 12, 20] }
+              - { blockID: 4, xywh: [36, 20, 12, 20] }
 
   # ===========================================================================
   CrmActivities:
@@ -914,11 +1137,13 @@ pages:
       - blockid: 1
         title: Open tasks and meetings
         kind: RecordList
-        xywh: [0, 0, 48, 18]
+        xywh: [0, 0, 48, 45]
         options:
           module: Activity
           prefilter: "status = 'Planned'"
           presort: due_at ASC
+          perPage: 10
+          showRecordPerPageOption: true
           fields:
             - name: activity_type
             - name: subject
@@ -929,11 +1154,13 @@ pages:
       - blockid: 2
         title: All activities
         kind: RecordList
-        xywh: [0, 18, 48, 24]
+        xywh: [0, 45, 48, 75]
         options:
           module: Activity
           presort: createdAt DESC
           perPage: 25
+          showRecordPerPageOption: true
+          showTotalCount: true
           fields:
             - name: activity_type
             - name: subject
@@ -950,8 +1177,8 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 48, 18] }
-          - { blockID: 2, xywh: [0, 18, 48, 24] }
+          - { blockID: 1, xywh: [0, 0, 48, 45] }
+          - { blockID: 2, xywh: [0, 45, 48, 75] }
     pages:
 
       RecordActivity:
@@ -962,7 +1189,7 @@ pages:
           - blockid: 1
             title: Activity
             kind: Record
-            xywh: [0, 0, 32, 36]
+            xywh: [0, 0, 32, 116]
             options:
               fields:
                 - name: activity_type
@@ -991,7 +1218,7 @@ pages:
                 clone: { enabled: true }
                 back: { enabled: true }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 32, 36] }
+              - { blockID: 1, xywh: [0, 0, 32, 116] }
 
       RecordNote:
         title: Note
@@ -1001,7 +1228,7 @@ pages:
           - blockid: 1
             title: Note
             kind: Record
-            xywh: [0, 0, 32, 30]
+            xywh: [0, 0, 32, 90]
             options:
               fields:
                 - name: title
@@ -1024,55 +1251,157 @@ pages:
                 clone: { enabled: true }
                 back: { enabled: true }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 32, 30] }
+              - { blockID: 1, xywh: [0, 0, 32, 90] }
 
   # ===========================================================================
+  # Email, HubSpot style: all campaigns in tabs by status, plus Templates,
+  # Sent, Drafts and Folders underneath
   CrmMarketing:
-    title: Email campaigns
+    title: Email
     visible: true
     weight: 7
     blocks:
       - blockid: 1
-        title: Campaigns
+        kind: Tabs
+        xywh: [0, 0, 48, 85]
+        options:
+          style:
+            appearance: tabs
+            alignment: left
+            justify: none
+            orientation: horizontal
+            position: start
+          tabs:
+            - { blockID: "10", title: All emails }
+            - { blockID: "11", title: Drafts }
+            - { blockID: "12", title: Scheduled }
+            - { blockID: "13", title: Sent }
+            - { blockID: "14", title: Archived }
+      - blockid: 10
+        title: All emails
         kind: RecordList
-        xywh: [0, 0, 48, 24]
+        xywh: [0, 0, 48, 80]
         options:
           module: EmailCampaign
-          presort: createdAt DESC
+          prefilter: "status != 'Archived'"
+          presort: updatedAt DESC
+          perPage: 25
+          showRecordPerPageOption: true
+          showTotalCount: true
+          bulkRecordEditEnabled: true
           fields:
             - name: name
+            - name: campaign
             - name: status
-            - name: template
-            - name: scheduled_at
+            - name: folder
+            - name: segment
             - name: sent_at
             - name: recipients_count
+            - name: opened_count
+            - name: clicked_count
+            - name: owner
+      - blockid: 11
+        title: Drafts
+        kind: RecordList
+        xywh: [0, 0, 48, 80]
+        options:
+          module: EmailCampaign
+          prefilter: "status = 'Draft'"
+          presort: updatedAt DESC
+          perPage: 25
+          showRecordPerPageOption: true
+          bulkRecordEditEnabled: true
+          fields:
+            - name: name
+            - name: campaign
+            - name: folder
+            - name: template
+            - name: segment
+            - name: owner
+      - blockid: 12
+        title: Scheduled
+        kind: RecordList
+        xywh: [0, 0, 48, 80]
+        options:
+          module: EmailCampaign
+          prefilter: "status = 'Scheduled' OR status = 'Sending'"
+          presort: scheduled_at ASC
+          perPage: 25
+          showRecordPerPageOption: true
+          bulkRecordEditEnabled: true
+          fields:
+            - name: name
+            - name: campaign
+            - name: status
+            - name: folder
+            - name: scheduled_at
+            - name: recipients_count
+            - name: owner
+      - blockid: 13
+        title: Sent
+        kind: RecordList
+        xywh: [0, 0, 48, 80]
+        options:
+          module: EmailCampaign
+          prefilter: "status = 'Sent'"
+          presort: sent_at DESC
+          perPage: 25
+          showRecordPerPageOption: true
+          bulkRecordEditEnabled: true
+          fields:
+            - name: name
+            - name: campaign
+            - name: folder
+            - name: sent_at
             - name: sent_count
             - name: opened_count
             - name: clicked_count
+            - name: unsubscribed_count
+      - blockid: 14
+        title: Archived
+        kind: RecordList
+        xywh: [0, 0, 48, 80]
+        options:
+          module: EmailCampaign
+          prefilter: "status = 'Archived'"
+          presort: updatedAt DESC
+          perPage: 25
+          showRecordPerPageOption: true
+          bulkRecordEditEnabled: true
+          fields:
+            - name: name
+            - name: campaign
+            - name: folder
+            - name: sent_at
             - name: owner
     page_layouts:
       CrmMarketingDefault:
         primary: true
-        meta: { title: Email campaigns }
+        meta: { title: Email }
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 48, 24] }
+          - { blockID: 1, xywh: [0, 0, 48, 85] }
     pages:
 
       RecordEmailCampaign:
-        title: Email campaign
+        title: Email
         module: EmailCampaign
         visible: false
         blocks:
           - blockid: 1
-            title: Campaign
+            title: Email
             kind: Record
-            xywh: [0, 0, 20, 40]
+            xywh: [0, 0, 18, 143]
             options:
+              # "+" next to Campaign, Template and Audience creates a new one
+              recordSelectorShowAddRecordButton: true
+              recordSelectorAddRecordDisplayOption: modal
               fields:
                 - name: name
+                - name: campaign
                 - name: status
+                - name: folder
                 - name: template
                 - name: segment
                 - name: audience_query
@@ -1087,7 +1416,7 @@ pages:
           - blockid: 2
             title: Actions
             kind: Automation
-            xywh: [20, 0, 28, 6]
+            xywh: [18, 0, 30, 14]
             options:
               buttons:
                 - label: 1. Build recipient list
@@ -1095,7 +1424,7 @@ pages:
                   workflow: crm_campaign_build_recipients
                   stepID: 10
                   variant: primary
-                - label: 2. Send campaign
+                - label: 2. Send email
                   resourceType: compose:record
                   workflow: crm_campaign_send
                   stepID: 10
@@ -1106,9 +1435,9 @@ pages:
                   stepID: 10
                   variant: light
           - blockid: 3
-            title: Engagement
+            title: Recipients
             kind: Metric
-            xywh: [20, 6, 28, 6]
+            xywh: [18, 14, 10, 16]
             options:
               metrics:
                 - label: Recipients
@@ -1116,25 +1445,39 @@ pages:
                   metricField: count
                   operation: count
                   filter: "campaign = ${recordID}"
+          - blockid: 5
+            title: Opened or clicked
+            kind: Metric
+            xywh: [28, 14, 10, 16]
+            options:
+              metrics:
                 - label: Opened or clicked
                   module: CampaignRecipient
                   metricField: count
                   operation: count
                   filter: "campaign = ${recordID} AND (status = 'Opened' OR status = 'Clicked')"
+          - blockid: 6
+            title: Unsubscribed
+            kind: Metric
+            xywh: [38, 14, 10, 16]
+            options:
+              metrics:
                 - label: Unsubscribed
                   module: CampaignRecipient
                   metricField: count
                   operation: count
                   filter: "campaign = ${recordID} AND status = 'Unsubscribed'"
           - blockid: 4
-            title: Recipients
+            title: Recipients (who this email goes to, and what each person did)
             kind: RecordList
-            xywh: [20, 12, 28, 28]
+            xywh: [18, 30, 30, 113]
             options:
               module: CampaignRecipient
-              prefilter: "campaign = ${recordID}"
+              refField: campaign
               presort: createdAt ASC
               perPage: 25
+              showRecordPerPageOption: true
+              showTotalCount: true
               hideAddButton: true
               fields:
                 - name: contact
@@ -1147,7 +1490,7 @@ pages:
         page_layouts:
           RecordEmailCampaignDefault:
             primary: true
-            meta: { title: Email campaign }
+            meta: { title: Email }
             config:
               visibility: { expression: "" }
               buttons:
@@ -1158,36 +1501,43 @@ pages:
                 clone: { enabled: true }
                 back: { enabled: true }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 20, 40] }
-              - { blockID: 2, xywh: [20, 0, 28, 6] }
-              - { blockID: 3, xywh: [20, 6, 28, 6] }
-              - { blockID: 4, xywh: [20, 12, 28, 28] }
+              - { blockID: 1, xywh: [0, 0, 18, 143] }
+              - { blockID: 2, xywh: [18, 0, 30, 14] }
+              - { blockID: 3, xywh: [18, 14, 10, 16] }
+              - { blockID: 5, xywh: [28, 14, 10, 16] }
+              - { blockID: 6, xywh: [38, 14, 10, 16] }
+              - { blockID: 4, xywh: [18, 30, 30, 113] }
 
       CrmEmailTemplates:
-        title: Email templates
+        title: Templates
         visible: true
         weight: 1
         blocks:
           - blockid: 1
             title: Email templates
             kind: RecordList
-            xywh: [0, 0, 48, 24]
+            xywh: [0, 0, 48, 75]
             options:
               module: EmailTemplate
               presort: name ASC
+              perPage: 25
+              showRecordPerPageOption: true
+              showTotalCount: true
+              bulkRecordEditEnabled: true
               fields:
                 - name: name
+                - name: folder
                 - name: category
                 - name: subject
                 - name: is_active
         page_layouts:
           CrmEmailTemplatesDefault:
             primary: true
-            meta: { title: Email templates }
+            meta: { title: Templates }
             config:
               visibility: { expression: "" }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 48, 24] }
+              - { blockID: 1, xywh: [0, 0, 48, 75] }
         pages:
           RecordEmailTemplate:
             title: Email template
@@ -1197,10 +1547,11 @@ pages:
               - blockid: 1
                 title: Template
                 kind: Record
-                xywh: [0, 0, 22, 56]
+                xywh: [0, 0, 22, 120]
                 options:
                   fields:
                     - name: name
+                    - name: folder
                     - name: category
                     - name: is_active
                     - name: subject
@@ -1210,7 +1561,7 @@ pages:
               - blockid: 2
                 title: Merge tags
                 kind: Content
-                xywh: [0, 56, 48, 6]
+                xywh: [0, 120, 48, 12]
                 options:
                   body: >-
                     <p>Use these tags in the subject and bodies:
@@ -1220,7 +1571,7 @@ pages:
               - blockid: 3
                 title: Preview
                 kind: IFrame
-                xywh: [22, 0, 26, 56]
+                xywh: [22, 0, 26, 120]
                 options:
                   srcField: preview_url
             page_layouts:
@@ -1237,23 +1588,290 @@ pages:
                     clone: { enabled: true }
                     back: { enabled: true }
                 blocks:
-                  - { blockID: 1, xywh: [0, 0, 22, 56] }
-                  - { blockID: 3, xywh: [22, 0, 26, 56] }
-                  - { blockID: 2, xywh: [0, 56, 48, 6] }
+                  - { blockID: 1, xywh: [0, 0, 22, 120] }
+                  - { blockID: 3, xywh: [22, 0, 26, 120] }
+                  - { blockID: 2, xywh: [0, 120, 48, 12] }
 
-      CrmCampaignRecipients:
-        title: Recipients
+      CrmEmailSent:
+        title: Sent
         visible: true
         weight: 2
         blocks:
           - blockid: 1
+            title: Sent emails
+            kind: RecordList
+            xywh: [0, 0, 48, 75]
+            options:
+              module: EmailCampaign
+              prefilter: "status = 'Sent'"
+              presort: sent_at DESC
+              perPage: 25
+              showRecordPerPageOption: true
+              showTotalCount: true
+              bulkRecordEditEnabled: true
+              fields:
+                - name: name
+                - name: campaign
+                - name: folder
+                - name: segment
+                - name: sent_at
+                - name: sent_count
+                - name: opened_count
+                - name: clicked_count
+                - name: bounced_count
+                - name: unsubscribed_count
+        page_layouts:
+          CrmEmailSentDefault:
+            primary: true
+            meta: { title: Sent }
+            config:
+              visibility: { expression: "" }
+            blocks:
+              - { blockID: 1, xywh: [0, 0, 48, 75] }
+
+      CrmEmailDrafts:
+        title: Drafts
+        visible: true
+        weight: 3
+        blocks:
+          - blockid: 1
+            title: Draft emails
+            kind: RecordList
+            xywh: [0, 0, 48, 75]
+            options:
+              module: EmailCampaign
+              prefilter: "status = 'Draft'"
+              presort: updatedAt DESC
+              perPage: 25
+              showRecordPerPageOption: true
+              showTotalCount: true
+              bulkRecordEditEnabled: true
+              fields:
+                - name: name
+                - name: campaign
+                - name: folder
+                - name: template
+                - name: segment
+                - name: owner
+        page_layouts:
+          CrmEmailDraftsDefault:
+            primary: true
+            meta: { title: Drafts }
+            config:
+              visibility: { expression: "" }
+            blocks:
+              - { blockID: 1, xywh: [0, 0, 48, 75] }
+
+      CrmEmailFolders:
+        title: Folders
+        visible: true
+        weight: 4
+        blocks:
+          - blockid: 1
+            title: How folders work
+            kind: Content
+            xywh: [0, 0, 48, 14]
+            options:
+              body: >-
+                <p>Create folders on the left. To move emails or templates, tick them in the list on the right,
+                choose <b>Edit</b> in the selection bar and set <b>Folder</b>. Open a folder to see what's in it.</p>
+          - blockid: 2
+            title: Folders
+            kind: RecordList
+            xywh: [0, 14, 14, 80]
+            options:
+              module: EmailFolder
+              presort: name ASC
+              perPage: 50
+              hideSearch: false
+              selectable: false
+              fields:
+                - name: name
+                - name: description
+          - blockid: 3
+            kind: Tabs
+            xywh: [14, 14, 34, 80]
+            options:
+              style:
+                appearance: tabs
+                alignment: left
+                justify: none
+                orientation: horizontal
+                position: start
+              tabs:
+                - { blockID: "10", title: All emails }
+                - { blockID: "11", title: All templates }
+                - { blockID: "12", title: Emails not in a folder }
+                - { blockID: "13", title: Templates not in a folder }
+          - blockid: 10
+            title: All emails
+            kind: RecordList
+            xywh: [0, 0, 34, 75]
+            options:
+              module: EmailCampaign
+              presort: updatedAt DESC
+              perPage: 25
+              showRecordPerPageOption: true
+              showTotalCount: true
+              selectable: true
+              bulkRecordEditEnabled: true
+              fields:
+                - name: name
+                - name: campaign
+                - name: folder
+                - name: status
+                - name: sent_at
+          - blockid: 11
+            title: All templates
+            kind: RecordList
+            xywh: [0, 0, 34, 75]
+            options:
+              module: EmailTemplate
+              presort: name ASC
+              perPage: 25
+              showRecordPerPageOption: true
+              showTotalCount: true
+              selectable: true
+              bulkRecordEditEnabled: true
+              fields:
+                - name: name
+                - name: folder
+                - name: category
+          - blockid: 12
+            title: Emails not in a folder
+            kind: RecordList
+            xywh: [0, 0, 34, 75]
+            options:
+              module: EmailCampaign
+              prefilter: "folder IS NULL"
+              presort: updatedAt DESC
+              perPage: 25
+              showRecordPerPageOption: true
+              selectable: true
+              bulkRecordEditEnabled: true
+              fields:
+                - name: name
+                - name: campaign
+                - name: status
+                - name: sent_at
+          - blockid: 13
+            title: Templates not in a folder
+            kind: RecordList
+            xywh: [0, 0, 34, 75]
+            options:
+              module: EmailTemplate
+              prefilter: "folder IS NULL"
+              presort: name ASC
+              perPage: 25
+              showRecordPerPageOption: true
+              selectable: true
+              bulkRecordEditEnabled: true
+              fields:
+                - name: name
+                - name: category
+        page_layouts:
+          CrmEmailFoldersDefault:
+            primary: true
+            meta: { title: Folders }
+            config:
+              visibility: { expression: "" }
+            blocks:
+              - { blockID: 1, xywh: [0, 0, 48, 14] }
+              - { blockID: 2, xywh: [0, 14, 14, 80] }
+              - { blockID: 3, xywh: [14, 14, 34, 80] }
+        pages:
+          RecordEmailFolder:
+            title: Email folder
+            module: EmailFolder
+            visible: false
+            blocks:
+              - blockid: 1
+                title: Folder
+                kind: Record
+                xywh: [0, 0, 14, 40]
+                options:
+                  fields:
+                    - name: name
+                    - name: description
+                    - name: owner
+              - blockid: 2
+                kind: Tabs
+                xywh: [14, 0, 34, 80]
+                options:
+                  style:
+                    appearance: tabs
+                    alignment: left
+                    justify: none
+                    orientation: horizontal
+                    position: start
+                  tabs:
+                    - { blockID: "10", title: Emails in this folder }
+                    - { blockID: "11", title: Templates in this folder }
+              - blockid: 10
+                title: Emails in this folder
+                kind: RecordList
+                xywh: [0, 0, 34, 75]
+                options:
+                  module: EmailCampaign
+                  refField: folder
+                  presort: updatedAt DESC
+                  perPage: 25
+                  showRecordPerPageOption: true
+                  bulkRecordEditEnabled: true
+                  fields:
+                    - name: name
+                    - name: campaign
+                    - name: status
+                    - name: sent_at
+                    - name: opened_count
+              - blockid: 11
+                title: Templates in this folder
+                kind: RecordList
+                xywh: [0, 0, 34, 75]
+                options:
+                  module: EmailTemplate
+                  refField: folder
+                  presort: name ASC
+                  perPage: 25
+                  showRecordPerPageOption: true
+                  bulkRecordEditEnabled: true
+                  fields:
+                    - name: name
+                    - name: category
+                    - name: subject
+            page_layouts:
+              RecordEmailFolderDefault:
+                primary: true
+                meta: { title: Email folder }
+                config:
+                  visibility: { expression: "" }
+                  buttons:
+                    new: { enabled: true }
+                    edit: { enabled: true }
+                    submit: { enabled: true }
+                    delete: { enabled: true }
+                    clone: { enabled: true }
+                    back: { enabled: true }
+                blocks:
+                  - { blockID: 1, xywh: [0, 0, 14, 40] }
+                  - { blockID: 2, xywh: [14, 0, 34, 80] }
+
+      # Recipients are shown on each campaign; this list is kept for
+      # admins and webhooks but hidden from the menu
+      CrmCampaignRecipients:
+        title: Recipients
+        visible: false
+        weight: 9
+        blocks:
+          - blockid: 1
             title: All campaign recipients
             kind: RecordList
-            xywh: [0, 0, 48, 30]
+            xywh: [0, 0, 48, 75]
             options:
               module: CampaignRecipient
               presort: createdAt DESC
               perPage: 50
+              showRecordPerPageOption: true
               hideAddButton: true
               fields:
                 - name: campaign
@@ -1272,7 +1890,7 @@ pages:
             config:
               visibility: { expression: "" }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 48, 30] }
+              - { blockID: 1, xywh: [0, 0, 48, 75] }
         pages:
           RecordCampaignRecipient:
             title: Campaign recipient
@@ -1282,7 +1900,7 @@ pages:
               - blockid: 1
                 title: Recipient
                 kind: Record
-                xywh: [0, 0, 32, 36]
+                xywh: [0, 0, 32, 134]
                 options:
                   fields:
                     - name: campaign
@@ -1313,42 +1931,202 @@ pages:
                     clone: { enabled: true }
                     back: { enabled: true }
                 blocks:
-                  - { blockID: 1, xywh: [0, 0, 32, 36] }
+                  - { blockID: 1, xywh: [0, 0, 32, 134] }
+
+  # ===========================================================================
+  # Campaigns: a brief plus the emails (and later other assets) that belong
+  # to it
+  CrmCampaigns:
+    title: Campaigns
+    visible: true
+    weight: 8
+    blocks:
+      - blockid: 1
+        title: Campaigns
+        kind: RecordList
+        xywh: [0, 0, 48, 75]
+        options:
+          module: Campaign
+          presort: createdAt DESC
+          perPage: 25
+          showRecordPerPageOption: true
+          showTotalCount: true
+          fields:
+            - name: name
+            - name: status
+            - name: owner
+            - name: start_date
+            - name: end_date
+            - name: channels
+            - name: audience
+    page_layouts:
+      CrmCampaignsDefault:
+        primary: true
+        meta: { title: Campaigns }
+        config:
+          visibility: { expression: "" }
+        blocks:
+          - { blockID: 1, xywh: [0, 0, 48, 75] }
+    pages:
+
+      RecordCampaign:
+        title: Campaign
+        module: Campaign
+        visible: false
+        blocks:
+          - blockid: 1
+            title: Campaign brief
+            kind: Record
+            xywh: [0, 0, 22, 160]
+            options:
+              recordSelectorShowAddRecordButton: true
+              recordSelectorAddRecordDisplayOption: modal
+              fields:
+                - name: name
+                - name: status
+                - name: owner
+                - name: start_date
+                - name: end_date
+                - name: budget
+                - name: audience
+                - name: channels
+                - name: about
+                - name: key_message_1
+                - name: key_message_2
+                - name: key_message_3
+                - name: keywords
+                - name: call_to_action
+                - name: writing_style
+                - name: notes
+          - blockid: 2
+            title: Actions
+            kind: Automation
+            xywh: [22, 0, 26, 14]
+            options:
+              buttons:
+                - label: Create email in this campaign
+                  resourceType: compose:record
+                  workflow: crm_campaign_new_email
+                  stepID: 10
+                  variant: primary
+                - label: Generate content with AI
+                  resourceType: compose:record
+                  workflow: crm_campaign_generate_content
+                  stepID: 10
+                  variant: outline-primary
+          - blockid: 6
+            title: Emails
+            kind: Metric
+            xywh: [22, 14, 9, 16]
+            options:
+              metrics:
+                - label: Emails
+                  module: EmailCampaign
+                  metricField: count
+                  operation: count
+                  filter: "campaign = ${recordID}"
+          - blockid: 7
+            title: Sent
+            kind: Metric
+            xywh: [31, 14, 9, 16]
+            options:
+              metrics:
+                - label: Sent
+                  module: EmailCampaign
+                  metricField: sent_count
+                  operation: sum
+                  filter: "campaign = ${recordID}"
+          - blockid: 8
+            title: Opened
+            kind: Metric
+            xywh: [40, 14, 8, 16]
+            options:
+              metrics:
+                - label: Opened
+                  module: EmailCampaign
+                  metricField: opened_count
+                  operation: sum
+                  filter: "campaign = ${recordID}"
+          - blockid: 3
+            title: Emails in this campaign
+            kind: RecordList
+            xywh: [22, 30, 26, 60]
+            options:
+              module: EmailCampaign
+              refField: campaign
+              presort: createdAt DESC
+              perPage: 10
+              hideAddButton: true
+              fields:
+                - name: name
+                - name: status
+                - name: sent_at
+                - name: recipients_count
+                - name: opened_count
+                - name: clicked_count
+          - blockid: 5
+            title: Generated content
+            kind: Record
+            xywh: [22, 90, 26, 70]
+            options:
+              fields:
+                - name: generated_content
+        page_layouts:
+          RecordCampaignDefault:
+            primary: true
+            meta: { title: Campaign }
+            config:
+              visibility: { expression: "" }
+              buttons:
+                new: { enabled: true }
+                edit: { enabled: true }
+                submit: { enabled: true }
+                delete: { enabled: true }
+                clone: { enabled: true }
+                back: { enabled: true }
+            blocks:
+              - { blockID: 1, xywh: [0, 0, 22, 160] }
+              - { blockID: 2, xywh: [22, 0, 26, 14] }
+              - { blockID: 6, xywh: [22, 14, 9, 16] }
+              - { blockID: 7, xywh: [31, 14, 9, 16] }
+              - { blockID: 8, xywh: [40, 14, 8, 16] }
+              - { blockID: 3, xywh: [22, 30, 26, 60] }
+              - { blockID: 5, xywh: [22, 90, 26, 70] }
 
   # ===========================================================================
   CrmReports:
     title: Reports
     visible: true
-    weight: 8
+    weight: 9
     blocks:
       - blockid: 1
         title: Open pipeline by stage
         kind: Chart
-        xywh: [0, 0, 24, 16]
+        xywh: [0, 0, 24, 42]
         options:
           chart: CrmOpenPipelineByStage
       - blockid: 2
         title: Deal funnel
         kind: Chart
-        xywh: [24, 0, 24, 16]
+        xywh: [24, 0, 24, 42]
         options:
           chart: CrmDealFunnel
       - blockid: 3
         title: Forecast by expected close month
         kind: Chart
-        xywh: [0, 16, 24, 16]
+        xywh: [0, 42, 24, 42]
         options:
           chart: CrmForecastByCloseMonth
       - blockid: 4
         title: Won revenue by month
         kind: Chart
-        xywh: [24, 16, 24, 16]
+        xywh: [24, 42, 24, 42]
         options:
           chart: CrmWonRevenueByMonth
       - blockid: 5
         title: Won vs lost
         kind: Chart
-        xywh: [0, 32, 24, 16]
+        xywh: [0, 84, 24, 42]
         options:
           chart: CrmWonVsLost
     page_layouts:
@@ -1358,11 +2136,11 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 24, 16] }
-          - { blockID: 2, xywh: [24, 0, 24, 16] }
-          - { blockID: 3, xywh: [0, 16, 24, 16] }
-          - { blockID: 4, xywh: [24, 16, 24, 16] }
-          - { blockID: 5, xywh: [0, 32, 24, 16] }
+          - { blockID: 1, xywh: [0, 0, 24, 42] }
+          - { blockID: 2, xywh: [24, 0, 24, 42] }
+          - { blockID: 3, xywh: [0, 42, 24, 42] }
+          - { blockID: 4, xywh: [24, 42, 24, 42] }
+          - { blockID: 5, xywh: [0, 84, 24, 42] }
     pages:
 
       CrmReportLeads:
@@ -1373,25 +2151,25 @@ pages:
           - blockid: 1
             title: Contacts by lifecycle stage
             kind: Chart
-            xywh: [0, 0, 24, 16]
+            xywh: [0, 0, 24, 42]
             options:
               chart: CrmContactsByLifecycle
           - blockid: 2
             title: Contacts by lead source
             kind: Chart
-            xywh: [24, 0, 24, 16]
+            xywh: [24, 0, 24, 42]
             options:
               chart: CrmLeadsBySource
           - blockid: 3
             title: New contacts by month
             kind: Chart
-            xywh: [0, 16, 24, 16]
+            xywh: [0, 42, 24, 42]
             options:
               chart: CrmNewContactsByMonth
           - blockid: 4
             title: Customers by lead source
             kind: Chart
-            xywh: [24, 16, 24, 16]
+            xywh: [24, 42, 24, 42]
             options:
               chart: CrmCustomersBySource
         page_layouts:
@@ -1401,10 +2179,10 @@ pages:
             config:
               visibility: { expression: "" }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 24, 16] }
-              - { blockID: 2, xywh: [24, 0, 24, 16] }
-              - { blockID: 3, xywh: [0, 16, 24, 16] }
-              - { blockID: 4, xywh: [24, 16, 24, 16] }
+              - { blockID: 1, xywh: [0, 0, 24, 42] }
+              - { blockID: 2, xywh: [24, 0, 24, 42] }
+              - { blockID: 3, xywh: [0, 42, 24, 42] }
+              - { blockID: 4, xywh: [24, 42, 24, 42] }
 
       CrmReportEmail:
         title: Email engagement
@@ -1414,19 +2192,19 @@ pages:
           - blockid: 1
             title: Recipients by status
             kind: Chart
-            xywh: [0, 0, 24, 16]
+            xywh: [0, 0, 24, 42]
             options:
               chart: CrmRecipientStatus
           - blockid: 2
             title: Emails sent by month
             kind: Chart
-            xywh: [24, 0, 24, 16]
+            xywh: [24, 0, 24, 42]
             options:
               chart: CrmEmailsSentByMonth
           - blockid: 3
             title: Engagement by campaign
             kind: Chart
-            xywh: [0, 16, 48, 18]
+            xywh: [0, 42, 48, 45]
             options:
               chart: CrmCampaignEngagement
         page_layouts:
@@ -1436,9 +2214,9 @@ pages:
             config:
               visibility: { expression: "" }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 24, 16] }
-              - { blockID: 2, xywh: [24, 0, 24, 16] }
-              - { blockID: 3, xywh: [0, 16, 48, 18] }
+              - { blockID: 1, xywh: [0, 0, 24, 42] }
+              - { blockID: 2, xywh: [24, 0, 24, 42] }
+              - { blockID: 3, xywh: [0, 42, 48, 45] }
 
       CrmReportAutomation:
         title: Automation performance
@@ -1448,19 +2226,19 @@ pages:
           - blockid: 1
             title: Runs by workflow
             kind: Chart
-            xywh: [0, 0, 24, 16]
+            xywh: [0, 0, 24, 42]
             options:
               chart: CrmAutomationRunsByWorkflow
           - blockid: 2
             title: Results
             kind: Chart
-            xywh: [24, 0, 24, 16]
+            xywh: [24, 0, 24, 42]
             options:
               chart: CrmAutomationResults
           - blockid: 3
             title: Runs per day
             kind: Chart
-            xywh: [0, 16, 48, 16]
+            xywh: [0, 42, 48, 42]
             options:
               chart: CrmAutomationRunsByDay
         page_layouts:
@@ -1470,20 +2248,20 @@ pages:
             config:
               visibility: { expression: "" }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 24, 16] }
-              - { blockID: 2, xywh: [24, 0, 24, 16] }
-              - { blockID: 3, xywh: [0, 16, 48, 16] }
+              - { blockID: 1, xywh: [0, 0, 24, 42] }
+              - { blockID: 2, xywh: [24, 0, 24, 42] }
+              - { blockID: 3, xywh: [0, 42, 48, 42] }
 
   # ===========================================================================
   CrmSettings:
     title: Settings
     visible: true
-    weight: 9
+    weight: 10
     blocks:
       - blockid: 1
-        title: Pipeline setup
+        title: Setup
         kind: Automation
-        xywh: [0, 0, 48, 5]
+        xywh: [0, 0, 48, 14]
         options:
           buttons:
             - label: Create default deal stages
@@ -1499,7 +2277,7 @@ pages:
       - blockid: 2
         title: Deal stages
         kind: RecordList
-        xywh: [0, 5, 48, 18]
+        xywh: [0, 14, 48, 45]
         options:
           module: DealStage
           presort: position ASC
@@ -1509,6 +2287,30 @@ pages:
             - name: probability
             - name: is_closed
             - name: is_won
+      # administrators only: the module is hidden from other users
+      - blockid: 3
+        title: AI settings (administrators only)
+        kind: RecordList
+        xywh: [0, 59, 24, 30]
+        options:
+          module: AiSettings
+          perPage: 5
+          fields:
+            - name: name
+            - name: model
+            - name: effort
+      - blockid: 4
+        title: Setting up the AI content generator
+        kind: Content
+        xywh: [24, 59, 24, 30]
+        options:
+          body: >-
+            <p>The <strong>Generate content with AI</strong> button on a campaign sends the campaign brief to Claude and saves the draft in Generated content.</p>
+            <ol>
+            <li>Get an API key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a> (add a payment method and set a monthly spend limit there).</li>
+            <li>Click <strong>Create new</strong> in AI settings, paste the key and save. Only one AI settings record is used.</li>
+            </ol>
+            <p>Each draft costs roughly 5p with Claude Opus 5.5, or about half that with Sonnet 5.5. Always read the draft before you use it.</p>
     page_layouts:
       CrmSettingsDefault:
         primary: true
@@ -1516,9 +2318,51 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 48, 5] }
-          - { blockID: 2, xywh: [0, 5, 48, 18] }
+          - { blockID: 1, xywh: [0, 0, 48, 14] }
+          - { blockID: 2, xywh: [0, 14, 48, 45] }
+          - { blockID: 3, xywh: [0, 59, 24, 30] }
+          - { blockID: 4, xywh: [24, 59, 24, 30] }
     pages:
+
+      RecordAiSettings:
+        title: AI settings
+        module: AiSettings
+        visible: false
+        blocks:
+          - blockid: 1
+            title: AI settings
+            kind: Record
+            xywh: [0, 0, 28, 46]
+            options:
+              fields:
+                - name: name
+                - name: anthropic_api_key
+                - name: model
+                - name: effort
+          - blockid: 2
+            title: About the key
+            kind: Content
+            xywh: [28, 0, 20, 46]
+            options:
+              body: >-
+                <p>Paste the key from <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com</a>. It starts with <code>sk-ant-</code>.</p>
+                <p>Only administrators can see this record. Set a monthly spend limit in the Anthropic console so costs can't run away.</p>
+        page_layouts:
+          RecordAiSettingsDefault:
+            primary: true
+            meta: { title: AI settings }
+            config:
+              visibility: { expression: "" }
+              buttons:
+                new: { enabled: true }
+                edit: { enabled: true }
+                submit: { enabled: true }
+                delete: { enabled: true }
+                clone: { enabled: false }
+                back: { enabled: true }
+            blocks:
+              - { blockID: 1, xywh: [0, 0, 28, 46] }
+              - { blockID: 2, xywh: [28, 0, 20, 46] }
 
       RecordDealStage:
         title: Deal stage
@@ -1528,7 +2372,7 @@ pages:
           - blockid: 1
             title: Deal stage
             kind: Record
-            xywh: [0, 0, 24, 24]
+            xywh: [0, 0, 24, 62]
             options:
               fields:
                 - name: name
@@ -1551,7 +2395,7 @@ pages:
                 clone: { enabled: true }
                 back: { enabled: true }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 24, 24] }
+              - { blockID: 1, xywh: [0, 0, 24, 62] }
 
       CrmAutomationRuns:
         title: Automation log
@@ -1561,11 +2405,12 @@ pages:
           - blockid: 1
             title: Automation runs
             kind: RecordList
-            xywh: [0, 0, 48, 30]
+            xywh: [0, 0, 48, 75]
             options:
               module: AutomationRun
               presort: createdAt DESC
               perPage: 50
+              showRecordPerPageOption: true
               hideAddButton: true
               fields:
                 - name: workflow_name
@@ -1582,7 +2427,7 @@ pages:
             config:
               visibility: { expression: "" }
             blocks:
-              - { blockID: 1, xywh: [0, 0, 48, 30] }
+              - { blockID: 1, xywh: [0, 0, 48, 75] }
         pages:
           RecordAutomationRun:
             title: Automation run
@@ -1592,7 +2437,7 @@ pages:
               - blockid: 1
                 title: Automation run
                 kind: Record
-                xywh: [0, 0, 32, 30]
+                xywh: [0, 0, 32, 107]
                 options:
                   fields:
                     - name: workflow
@@ -1604,6 +2449,7 @@ pages:
                     - name: contact
                     - name: deal
                     - name: campaign
+                    - name: segment
                     - name: message
             page_layouts:
               RecordAutomationRunDefault:
@@ -1619,4 +2465,4 @@ pages:
                     clone: { enabled: false }
                     back: { enabled: true }
                 blocks:
-                  - { blockID: 1, xywh: [0, 0, 32, 30] }
+                  - { blockID: 1, xywh: [0, 0, 32, 107] }

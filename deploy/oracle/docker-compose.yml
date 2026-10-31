@@ -1,0 +1,62 @@
+# DM-CRM production stack: PostgreSQL, the DM-CRM server and Caddy for
+# HTTPS (certificates are issued automatically for $DOMAIN).
+#
+# Settings come from .env next to this file (see .env.example).
+
+services:
+  db:
+    image: postgres:15
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: corteza
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+      POSTGRES_DB: corteza
+    volumes:
+      - dbdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U corteza -d corteza"]
+      interval: 10s
+      retries: 10
+
+  server:
+    image: dm-crm:latest
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DB_DSN: postgres://corteza:${POSTGRES_PASSWORD}@db:5432/corteza?sslmode=disable
+      DOMAIN: ${DOMAIN:?set DOMAIN in .env}
+      # Caddy terminates HTTPS in front of the server; without this Corteza
+      # builds http:// URLs and rejects the https:// login redirect
+      HTTP_SSL_TERMINATED: "true"
+      AUTH_JWT_SECRET: ${AUTH_JWT_SECRET:?set AUTH_JWT_SECRET in .env}
+      ENVIRONMENT: production
+      LOG_LEVEL: warn
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USER: ${SMTP_USER:-}
+      SMTP_PASS: ${SMTP_PASS:-}
+      SMTP_FROM: ${SMTP_FROM:-}
+    volumes:
+      - serverdata:/data
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on: [server]
+    ports:
+      - "80:80"
+      - "443:443"
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddydata:/data
+      - caddyconfig:/config
+
+volumes:
+  dbdata:
+  serverdata:
+  caddydata:
+  caddyconfig:

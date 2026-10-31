@@ -1,0 +1,8 @@
+# Only the server source and branding go into the DM-CRM image
+*
+!server/
+!branding/
+!locale/
+server/**/*_test.go
+server/tests/
+server/webapp/
