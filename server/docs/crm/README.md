@@ -341,3 +341,25 @@ applied as the general custom CSS by `apply-branding-settings.sh`, which
 also adds the "DM-CRM font (Figtree)" code snippet that loads the font from
 Google Fonts. The update script applies it to the container it updates
 (`BRANDING_CONTAINER`), so rehearsals get it too.
+
+## Pipeline board
+
+The Pipeline page is a board of Record organizer blocks, one per deal stage.
+`components/PageBlocks/RecordOrganizerBase.vue` carries DM-CRM additions,
+driven by block options:
+
+- `cardFields`: extra fields shown on each card as small "label value" rows
+  (amount, company, contact, close date, owner), like HubSpot's deal cards.
+- `totalField`, `weightedField`, `totalPrefix`: the column header shows the
+  number of deals, their total and the weighted total.
+- Dragging a card to another column saves the deal normally (when the block
+  has no position field), so `crm_deal_stage_rules` and the other deal
+  workflows run; Corteza's own "organize" action skips them.
+- The compact **+** in each column creates a deal already in that stage.
+
+Deals don't need a name: `crm_deal_auto_name` names an unnamed deal after
+its company or primary contact (e.g. "Brightwidgets deal"), or "New deal" and
+the date.
+
+Top-level pages have line icons (`branding/icons/*.svg`) set through the page
+`config.navitem.icon`.

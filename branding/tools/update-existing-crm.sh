@@ -34,7 +34,7 @@ ADMIN=$4
 # every CRM page and page layout is replaced from the YAML (pages hold no
 # data; changes made with the page builder are overwritten)
 REPLACE_PAGES=$(grep -oE '^ +(Crm|Record)[A-Za-z]+:$' server/provision/750_crm/1400_pages.yaml | tr -d ' :' | tr '\n' ' ')
-REPLACE_WORKFLOWS="crm_contact_defaults crm_campaign_build_recipients"
+REPLACE_WORKFLOWS="crm_contact_defaults crm_campaign_build_recipients crm_deal_auto_name"
 
 TOOLS=$(cd "$(dirname "$0")" && pwd)
 . "$TOOLS/target.sh"

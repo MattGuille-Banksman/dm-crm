@@ -343,9 +343,8 @@ modules:
     name: Deal
     fields:
       name:
-        label: Deal name
+        label: Deal name (filled in automatically when left empty)
         kind: String
-        required: true
       amount:
         label: Amount
         kind: Number

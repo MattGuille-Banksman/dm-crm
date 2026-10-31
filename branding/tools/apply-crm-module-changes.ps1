@@ -231,6 +231,14 @@ Update-Module 'AutomationRun' @(
     (F 'segment' 'Record' 'Segment' (RecordOpts $segment.moduleID 'name' @('name')))
 )
 
+# deals are named automatically (crm_deal_auto_name), so the name is optional
+Update-Module 'Deal' @() {
+    param($mod)
+    $name = $mod.fields | Where-Object { $_.name -eq 'name' }
+    $name.isRequired = $false
+    $name.label = 'Deal name (filled in automatically when left empty)'
+}
+
 # --- currency ------------------------------------------------------------------
 # Number fields that still show dollars switch to pounds
 foreach ($m in Get-Modules) {

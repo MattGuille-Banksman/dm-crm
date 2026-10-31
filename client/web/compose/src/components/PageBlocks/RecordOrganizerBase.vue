@@ -4,17 +4,30 @@
     v-on="$listeners"
     @refreshBlock="refresh"
   >
+    <!-- DM-CRM: column summary (count and totals) with a compact add button -->
     <template
-      v-if="canAddRecord"
+      v-if="canAddRecord || totalField"
       #toolbar
     >
-      <div class="p-3 border-bottom">
+      <div class="dm-organizer-toolbar d-flex align-items-center gap-1 px-3 pb-2">
+        <div
+          v-if="totalField"
+          v-b-tooltip.noninteractive.hover="{ title: weightedField ? `Weighted ${formatTotal(columnWeighted)}` : '', boundary: 'body' }"
+          class="dm-organizer-totals text-truncate"
+        >
+          <span class="dm-organizer-count">{{ records.length }}</span>
+          <span>{{ formatTotal(columnTotal) }}</span>
+        </div>
+
         <b-button
-          variant="primary"
-          size="lg"
+          v-if="canAddRecord"
+          v-b-tooltip.noninteractive.hover="{ title: $t('recordOrganizer.addNewRecord'), boundary: 'body' }"
+          variant="light"
+          size="sm"
+          class="dm-organizer-add ml-auto"
           @click.prevent="createNewRecord"
         >
-          {{ $t('recordOrganizer.addNewRecord') }}
+          <font-awesome-icon :icon="['fas', 'plus']" />
         </b-button>
       </div>
     </template>
@@ -68,7 +81,7 @@
           >
             <h6
               v-if="labelField"
-              class="d-flex overflow-hidden"
+              class="d-flex overflow-hidden dm-card-title"
             >
               <field-viewer
                 v-if="labelField.canReadRecordValue"
@@ -101,6 +114,28 @@
                 {{ $t('field.noPermission') }}
               </i>
             </b-card-text>
+
+            <!-- DM-CRM: extra fields as small "label value" rows (mini card) -->
+            <div
+              v-for="field in cardFields.filter(f => hasValue(record, f))"
+              :key="field.name"
+              class="dm-card-row d-flex align-items-baseline gap-1 overflow-hidden"
+              :class="`dm-card-${field.name}`"
+            >
+              <span
+                v-if="cardLabel(field)"
+                class="dm-card-label text-nowrap"
+              >{{ cardLabel(field) }}</span>
+              <span class="dm-card-value text-truncate">
+                <field-viewer
+                  v-if="field.canReadRecordValue"
+                  :field="field"
+                  :record="record"
+                  :namespace="namespace"
+                  value-only
+                />
+              </span>
+            </div>
           </b-card>
         </draggable>
       </div>
@@ -204,6 +239,37 @@ export default {
       }
 
       return this.allFields.find(f => f.name === descriptionField) || {}
+    },
+
+    // DM-CRM: board settings live in the block's meta (meta.board), since
+    // the block's options only keep the keys Corteza knows about
+    board () {
+      return (this.block.meta || {}).board || {}
+    },
+
+    // extra fields shown on each card
+    cardFields () {
+      const { cardFields = [] } = this.board
+      return cardFields
+        .map(name => this.allFields.find(f => f.name === name))
+        .filter(f => !!f)
+    },
+
+    // summed per column
+    totalField () {
+      return this.board.totalField
+    },
+
+    weightedField () {
+      return this.board.weightedField
+    },
+
+    columnTotal () {
+      return this.sumField(this.totalField)
+    },
+
+    columnWeighted () {
+      return this.sumField(this.weightedField)
     },
 
     positionField () {
@@ -314,12 +380,59 @@ export default {
     },
 
     reorganize ({ element: record, newIndex }) {
+      const { positionField, groupField, group } = this.options
+
+      if (!positionField && groupField) {
+        // DM-CRM: without a position field a drop only changes the group, so
+        // save the record normally; unlike "organize" this runs the record's
+        // update workflows (e.g. deal stage rules)
+        this.saveGroupChange(record, groupField, group)
+        return
+      }
+
       // Move record to a different position in a different group
       this.moveRecord(
         record,
         this.calcNewPosition(record, newIndex),
         this.options.group,
       )
+    },
+
+    async saveGroupChange (record, groupField, group) {
+      const r = record.clone()
+      r.values[groupField] = group
+
+      try {
+        await this.$ComposeAPI.recordUpdate(r)
+      } catch (e) {
+        this.toastErrorHandler(this.$t('notification:record.updateFailed'))(e)
+      }
+
+      // every column of this module (and the totals) reloads
+      this.$root.$emit('module-records-updated', { moduleID: this.moduleID })
+    },
+
+    // empty fields are left off the card
+    hasValue (record, field) {
+      const v = record.values[field.name]
+      return Array.isArray(v) ? v.length > 0 : (v !== undefined && v !== null && v !== '' && v !== '0')
+    },
+
+    // short labels from meta.board.labels, falling back to the field label
+    cardLabel (field) {
+      const { labels = {} } = this.board
+      // an empty label shows the value on its own
+      return field.name in labels ? labels[field.name] : (field.label || field.name)
+    },
+
+    sumField (name) {
+      if (!name) return 0
+      return this.records.reduce((sum, r) => sum + (parseFloat(r.values[name]) || 0), 0)
+    },
+
+    formatTotal (value) {
+      const prefix = this.board.totalPrefix || ''
+      return prefix + Math.round(value).toLocaleString('en-GB')
     },
 
     reposition ({ element: record, newIndex }) {
@@ -506,7 +619,7 @@ export default {
       this.abortableRequests.push(cancel)
 
       return response().then(({ set }) => {
-        const fields = [this.labelField, this.descriptionField].filter(f => !!f)
+        const fields = [this.labelField, this.descriptionField, ...this.cardFields].filter(f => !!f)
         this.records = set.map(r => Object.freeze(new compose.Record(this.roModule, r)))
 
         this.updateRecordSet(this.records)

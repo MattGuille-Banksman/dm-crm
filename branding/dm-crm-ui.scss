@@ -1,4 +1,4 @@
-/* DM-CRM UI v2
+/* DM-CRM UI v3
  *
  * Applied as the "general" custom CSS (Admin Area > User interface >
  * Custom CSS) by branding/tools/apply-branding-settings.sh. It is compiled
@@ -327,4 +327,207 @@ td .badge,
   .record-list-table {
     overflow-x: hidden !important;
   }
+}
+
+/* ===================================================================== */
+/* v3: denser layout (Panze-style), pipeline cards, menu icons            */
+/* ===================================================================== */
+
+/* --------------------------------------------------------- density */
+
+body {
+  font-size: 0.8125rem;
+}
+
+.header-navigation h2.title {
+  font-size: 1.2rem !important;
+}
+
+.header-navigation {
+  padding-top: 0.6rem !important;
+  padding-bottom: 0.35rem !important;
+}
+
+.card-header {
+  padding: 0.7rem 0.9rem 0.2rem !important;
+}
+
+.card-header h5 {
+  font-size: 0.875rem;
+}
+
+.btn {
+  font-size: 0.8125rem;
+  padding: 0.32rem 0.85rem;
+}
+
+.btn-lg {
+  font-size: 0.8125rem !important;
+  padding: 0.36rem 0.9rem !important;
+}
+
+.form-control,
+.custom-select {
+  font-size: 0.8125rem;
+  height: calc(1.5em + 0.6rem + 2px);
+  padding: 0.3rem 0.7rem;
+}
+
+textarea.form-control {
+  height: auto;
+}
+
+.vs__dropdown-toggle {
+  min-height: calc(1.5em + 0.6rem + 2px);
+  font-size: 0.8125rem;
+}
+
+.table td,
+.table th {
+  padding: 0.45rem 0.7rem !important;
+}
+
+.table td {
+  font-size: 0.8125rem;
+}
+
+.form-group {
+  margin-bottom: 0.7rem;
+}
+
+.field-container > label,
+.field-container legend,
+.field-container .text-primary {
+  font-size: 0.7rem !important;
+}
+
+/* sidebar: tighter items with icons */
+.b-sidebar.sidebar .nav-item {
+  padding: 0.38rem 0.65rem !important;
+  font-size: 0.84rem;
+}
+
+.b-sidebar.sidebar .nav-item img {
+  width: 1.05rem !important;
+  height: 1.05rem !important;
+  margin-right: 0.5rem !important;
+  opacity: 0.9;
+}
+
+/* the line icons are slate; the current page's icon is tinted indigo */
+.b-sidebar.sidebar .nav-item.nav-active img,
+.b-sidebar.sidebar .nav-item.nav-exact-active img {
+  filter: invert(27%) sepia(92%) saturate(3600%) hue-rotate(242deg) brightness(92%) contrast(95%);
+  opacity: 1;
+}
+
+/* metric tiles: label on top, number below, both left-aligned feel */
+.vue-grid-item .text-center > svg text {
+  fill: var(--black);
+}
+
+/* ------------------------------------------------- pipeline (board) */
+
+/* a board column is a card with a tinted body so the deal cards stand out */
+.card:has(.dm-organizer-toolbar) .card-body {
+  background: var(--light);
+}
+
+.dm-organizer-toolbar {
+  font-size: 0.75rem;
+  color: var(--secondary);
+}
+
+.dm-organizer-totals span {
+  margin-right: 0.15rem;
+}
+
+.dm-organizer-count {
+  display: inline-block;
+  min-width: 1.4rem;
+  padding: 0 0.4rem;
+  border-radius: 999px;
+  background: $dm-tint-strong;
+  color: var(--primary);
+  font-weight: 700;
+  text-align: center;
+}
+
+.dm-organizer-weighted {
+  opacity: 0.8;
+}
+
+.btn.dm-organizer-add {
+  padding: 0.2rem 0.55rem !important;
+  line-height: 1;
+}
+
+/* deal cards: white mini cards with a coloured edge, lift on hover */
+.record-item.card {
+  border: 1px solid $dm-hairline !important;
+  border-left: 3px solid var(--primary) !important;
+  border-radius: 12px !important;
+  background: var(--white) !important;
+  margin-bottom: 0.6rem !important;
+  box-shadow: 0 1px 2px rgba(11, 16, 38, 0.05) !important;
+  transition: box-shadow 0.15s ease, transform 0.15s ease;
+}
+
+.record-item.card:hover {
+  background: var(--white) !important;
+  box-shadow: 0 6px 16px rgba(11, 16, 38, 0.1) !important;
+  transform: translateY(-1px);
+}
+
+.record-item .card-body {
+  padding: 0.65rem 0.75rem !important;
+  background: transparent !important;
+}
+
+.record-item .dm-card-title {
+  font-size: 0.85rem;
+  font-weight: 700;
+  margin-bottom: 0.35rem;
+  color: var(--black);
+}
+
+.dm-card-row {
+  font-size: 0.75rem;
+  line-height: 1.5;
+}
+
+.dm-card-label {
+  color: var(--secondary);
+  min-width: 2.6rem;
+}
+
+.dm-card-value {
+  color: var(--black);
+  font-weight: 500;
+}
+
+/* the board's drop hint when a column is empty */
+.card:has(.dm-organizer-toolbar) .small.text-secondary {
+  border: 1.5px dashed $dm-hairline;
+  border-radius: 12px;
+  padding: 0.9rem 0.6rem;
+  text-align: center;
+}
+
+/* deal card rows: amount stands out, company/contact read as plain lines */
+.dm-card-row.dm-card-amount .dm-card-value {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--black);
+}
+
+.dm-card-row.dm-card-company .dm-card-value,
+.dm-card-row.dm-card-contact .dm-card-value,
+.dm-card-row.dm-card-owner .dm-card-value {
+  font-weight: 500;
+  color: var(--secondary);
+}
+
+.dm-card-row .dm-card-value a {
+  color: inherit;
 }

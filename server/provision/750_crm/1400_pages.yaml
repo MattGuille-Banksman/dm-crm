@@ -20,6 +20,7 @@ pages:
     title: Dashboard
     visible: true
     weight: 1
+    config: { navitem: { icon: { type: link, src: /branding/icons/dashboard.svg } } }
     blocks:
       - blockid: 1
         title: Open pipeline
@@ -128,10 +129,10 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 12, 14] }
-          - { blockID: 2, xywh: [12, 0, 12, 14] }
-          - { blockID: 3, xywh: [24, 0, 12, 14] }
-          - { blockID: 4, xywh: [36, 0, 12, 14] }
+          - { blockID: 1, xywh: [0, 0, 12, 10] }
+          - { blockID: 2, xywh: [12, 0, 12, 10] }
+          - { blockID: 3, xywh: [24, 0, 12, 10] }
+          - { blockID: 4, xywh: [36, 0, 12, 10] }
           - { blockID: 5, xywh: [0, 14, 24, 45] }
           - { blockID: 6, xywh: [24, 14, 24, 45] }
           - { blockID: 7, xywh: [0, 59, 24, 45] }
@@ -142,6 +143,7 @@ pages:
     title: Contacts
     visible: true
     weight: 2
+    config: { navitem: { icon: { type: link, src: /branding/icons/contacts.svg } } }
     blocks:
       - blockid: 1
         title: Contacts
@@ -720,6 +722,7 @@ pages:
     title: Companies
     visible: true
     weight: 3
+    config: { navitem: { icon: { type: link, src: /branding/icons/companies.svg } } }
     blocks:
       - blockid: 1
         title: Companies
@@ -881,6 +884,7 @@ pages:
     title: Pipeline
     visible: true
     weight: 4
+    config: { navitem: { icon: { type: link, src: /branding/icons/pipeline.svg } } }
     blocks:
       - blockid: 1
         title: Open pipeline
@@ -923,10 +927,17 @@ pages:
         title: New
         kind: RecordOrganizer
         xywh: [0, 14, 8, 80]
+        # DM-CRM board settings: mini-card rows and column totals
+        meta:
+          board:
+            cardFields: [amount, company, contact, close_date, owner]
+            labels: { amount: "", company: "", contact: "", close_date: Close, owner: "" }
+            totalField: amount
+            weightedField: forecast_amount
+            totalPrefix: "£"
         options:
           module: Deal
           labelField: name
-          descriptionField: amount
           groupField: stage
           group: New
           filter: "stage = 'New'"
@@ -934,10 +945,17 @@ pages:
         title: Qualified
         kind: RecordOrganizer
         xywh: [8, 14, 8, 80]
+        # DM-CRM board settings: mini-card rows and column totals
+        meta:
+          board:
+            cardFields: [amount, company, contact, close_date, owner]
+            labels: { amount: "", company: "", contact: "", close_date: Close, owner: "" }
+            totalField: amount
+            weightedField: forecast_amount
+            totalPrefix: "£"
         options:
           module: Deal
           labelField: name
-          descriptionField: amount
           groupField: stage
           group: Qualified
           filter: "stage = 'Qualified'"
@@ -945,10 +963,17 @@ pages:
         title: Proposal
         kind: RecordOrganizer
         xywh: [16, 14, 8, 80]
+        # DM-CRM board settings: mini-card rows and column totals
+        meta:
+          board:
+            cardFields: [amount, company, contact, close_date, owner]
+            labels: { amount: "", company: "", contact: "", close_date: Close, owner: "" }
+            totalField: amount
+            weightedField: forecast_amount
+            totalPrefix: "£"
         options:
           module: Deal
           labelField: name
-          descriptionField: amount
           groupField: stage
           group: Proposal
           filter: "stage = 'Proposal'"
@@ -956,10 +981,17 @@ pages:
         title: Negotiation
         kind: RecordOrganizer
         xywh: [24, 14, 8, 80]
+        # DM-CRM board settings: mini-card rows and column totals
+        meta:
+          board:
+            cardFields: [amount, company, contact, close_date, owner]
+            labels: { amount: "", company: "", contact: "", close_date: Close, owner: "" }
+            totalField: amount
+            weightedField: forecast_amount
+            totalPrefix: "£"
         options:
           module: Deal
           labelField: name
-          descriptionField: amount
           groupField: stage
           group: Negotiation
           filter: "stage = 'Negotiation'"
@@ -967,10 +999,17 @@ pages:
         title: Won
         kind: RecordOrganizer
         xywh: [32, 14, 8, 80]
+        # DM-CRM board settings: mini-card rows and column totals
+        meta:
+          board:
+            cardFields: [amount, company, contact, close_date, owner]
+            labels: { amount: "", company: "", contact: "", close_date: Close, owner: "" }
+            totalField: amount
+            weightedField: forecast_amount
+            totalPrefix: "£"
         options:
           module: Deal
           labelField: name
-          descriptionField: amount
           groupField: stage
           group: Won
           filter: "stage = 'Won'"
@@ -978,10 +1017,17 @@ pages:
         title: Lost
         kind: RecordOrganizer
         xywh: [40, 14, 8, 80]
+        # DM-CRM board settings: mini-card rows and column totals
+        meta:
+          board:
+            cardFields: [amount, company, contact, close_date, owner]
+            labels: { amount: "", company: "", contact: "", close_date: Close, owner: "" }
+            totalField: amount
+            weightedField: forecast_amount
+            totalPrefix: "£"
         options:
           module: Deal
           labelField: name
-          descriptionField: amount
           groupField: stage
           group: Lost
           filter: "stage = 'Lost'"
@@ -992,21 +1038,22 @@ pages:
         config:
           visibility: { expression: "" }
         blocks:
-          - { blockID: 1, xywh: [0, 0, 16, 14] }
-          - { blockID: 2, xywh: [16, 0, 16, 14] }
-          - { blockID: 3, xywh: [32, 0, 16, 14] }
-          - { blockID: 4, xywh: [0, 14, 8, 80] }
-          - { blockID: 5, xywh: [8, 14, 8, 80] }
-          - { blockID: 6, xywh: [16, 14, 8, 80] }
-          - { blockID: 7, xywh: [24, 14, 8, 80] }
-          - { blockID: 8, xywh: [32, 14, 8, 80] }
-          - { blockID: 9, xywh: [40, 14, 8, 80] }
+          - { blockID: 1, xywh: [0, 0, 16, 10] }
+          - { blockID: 2, xywh: [16, 0, 16, 10] }
+          - { blockID: 3, xywh: [32, 0, 16, 10] }
+          - { blockID: 4, xywh: [0, 10, 8, 80] }
+          - { blockID: 5, xywh: [8, 10, 8, 80] }
+          - { blockID: 6, xywh: [16, 10, 8, 80] }
+          - { blockID: 7, xywh: [24, 10, 8, 80] }
+          - { blockID: 8, xywh: [32, 10, 8, 80] }
+          - { blockID: 9, xywh: [40, 10, 8, 80] }
 
   # ===========================================================================
   CrmDeals:
     title: Deals
     visible: true
     weight: 5
+    config: { navitem: { icon: { type: link, src: /branding/icons/deals.svg } } }
     blocks:
       - blockid: 1
         title: Deals
@@ -1165,6 +1212,7 @@ pages:
     title: Activities
     visible: true
     weight: 6
+    config: { navitem: { icon: { type: link, src: /branding/icons/activities.svg } } }
     blocks:
       - blockid: 1
         title: Open tasks and meetings
@@ -1294,6 +1342,7 @@ pages:
     title: Email
     visible: true
     weight: 7
+    config: { navitem: { icon: { type: link, src: /branding/icons/email.svg } } }
     blocks:
       - blockid: 1
         kind: Tabs
@@ -1991,6 +2040,7 @@ pages:
     title: Campaigns
     visible: true
     weight: 8
+    config: { navitem: { icon: { type: link, src: /branding/icons/campaigns.svg } } }
     blocks:
       - blockid: 1
         title: Campaigns
@@ -2151,6 +2201,7 @@ pages:
     title: Analytics & Reporting
     visible: true
     weight: 9
+    config: { navitem: { icon: { type: link, src: /branding/icons/reports.svg } } }
     blocks:
       - blockid: 1
         title: Open pipeline by stage
@@ -2310,6 +2361,7 @@ pages:
     title: Settings
     visible: true
     weight: 10
+    config: { navitem: { icon: { type: link, src: /branding/icons/settings.svg } } }
     blocks:
       - blockid: 1
         title: Setup

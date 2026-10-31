@@ -3250,3 +3250,120 @@ workflows:
       - { parentid: 20, childid: 30, meta: { name: Loop, visual: { id: "p20_30", parent: "1", value: null, points: [] } } }
       - { parentid: 20, childid: 40, meta: { name: Done, visual: { id: "p20_40", parent: "1", value: null, points: [] } } }
       - { parentid: 30, childid: 32, meta: { visual: { id: "p30_32", parent: "1", value: null, points: [] } } }
+
+  # ===========================================================================
+  # Deals don't need a name: an empty one is filled from the company (or the
+  # contact) when the deal is saved, e.g. "Brightwidgets deal"
+  crm_deal_auto_name:
+    meta:
+      name: "CRM: Deal - name automatically"
+      description: Names deals saved without a name after their company or primary contact.
+    enabled: true
+    trace: false
+    keepsessions: 0
+    triggers:
+      - resourceType: compose:record
+        eventType: beforeCreate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t1"
+            parent: "1"
+            xywh: [0, 0, 0, 0]
+            edges:
+              - { parentID: "t1", childID: "10", meta: { visual: { id: "et1", parent: "1", value: null, points: [] } } }
+      - resourceType: compose:record
+        eventType: beforeUpdate
+        enabled: true
+        stepID: 10
+        constraints:
+          - { name: namespace.handle, op: "=", values: [crm] }
+          - { name: module.handle, op: "=", values: [Deal] }
+        meta:
+          visual:
+            id: "t2"
+            parent: "1"
+            xywh: [0, 160, 0, 0]
+            edges:
+              - { parentID: "t2", childID: "10", meta: { visual: { id: "et2", parent: "1", value: null, points: [] } } }
+    steps:
+      - id: 10
+        kind: gateway
+        ref: excl
+        meta:
+          name: Name missing?
+          visual: { id: "10", parent: "1", value: null, xywh: [200, 80, 0, 0] }
+      - id: 20
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Company }
+          - { target: record, type: ID, expr: "record.values.company" }
+        results:
+          - { target: company, expr: "record" }
+        meta:
+          name: Load company
+          visual: { id: "20", parent: "1", value: null, xywh: [400, 0, 0, 0] }
+      - id: 25
+        kind: expressions
+        arguments:
+          - { target: record.values.name, type: Any, expr: 'trim(coalesce(company.values.name, "New")) + " deal"' }
+        meta:
+          name: Name after company
+          visual: { id: "25", parent: "1", value: null, xywh: [600, 0, 0, 0] }
+      - id: 30
+        kind: function
+        ref: composeRecordsLookup
+        arguments:
+          - { target: namespace, type: Handle, value: crm }
+          - { target: module, type: Handle, value: Contact }
+          - { target: record, type: ID, expr: "record.values.contact" }
+        results:
+          - { target: contact, expr: "record" }
+        meta:
+          name: Load contact
+          visual: { id: "30", parent: "1", value: null, xywh: [400, 160, 0, 0] }
+      - id: 35
+        kind: expressions
+        arguments:
+          - { target: who, type: String, expr: 'trim(coalesce(contact.values.full_name, contact.values.email, "New"))' }
+          - { target: record.values.name, type: Any, expr: 'who + " deal"' }
+        meta:
+          name: Name after contact
+          visual: { id: "35", parent: "1", value: null, xywh: [600, 160, 0, 0] }
+      - id: 40
+        kind: expressions
+        arguments:
+          - { target: record.values.name, type: Any, expr: '"New deal " + strftime(now(), "%d/%m/%Y")' }
+        meta:
+          name: Name with date
+          visual: { id: "40", parent: "1", value: null, xywh: [400, 320, 0, 0] }
+      - id: 50
+        kind: termination
+        meta:
+          name: Name already set
+          visual: { id: "50", parent: "1", value: null, xywh: [200, 320, 0, 0] }
+    paths:
+      - parentid: 10
+        childid: 20
+        expr: 'isEmpty(trim(coalesce(record.values.name, ""))) && !isEmpty(record.values.company)'
+        meta: { name: From company, visual: { id: "p10_20", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 30
+        expr: 'isEmpty(trim(coalesce(record.values.name, ""))) && !isEmpty(record.values.contact)'
+        meta: { name: From contact, visual: { id: "p10_30", parent: "1", value: null, points: [] } }
+      - parentid: 10
+        childid: 40
+        expr: 'isEmpty(trim(coalesce(record.values.name, "")))'
+        meta: { name: With date, visual: { id: "p10_40", parent: "1", value: null, points: [] } }
+      - { parentid: 20, childid: 25, meta: { visual: { id: "p20_25", parent: "1", value: null, points: [] } } }
+      - { parentid: 30, childid: 35, meta: { visual: { id: "p30_35", parent: "1", value: null, points: [] } } }
+      - parentid: 10
+        childid: 50
+        expr: ""
+        meta: { name: Has a name, visual: { id: "p10_50", parent: "1", value: null, points: [] } }
