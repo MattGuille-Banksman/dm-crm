@@ -32,7 +32,7 @@ pages:
               metricField: amount
               operation: sum
               filter: "stage != 'Won' AND stage != 'Lost'"
-              prefix: "$"
+              prefix: "£"
               numberFormat: "0,0"
       - blockid: 2
         title: Weighted forecast
@@ -45,7 +45,7 @@ pages:
               metricField: forecast_amount
               operation: sum
               filter: "stage != 'Won' AND stage != 'Lost'"
-              prefix: "$"
+              prefix: "£"
               numberFormat: "0,0"
       - blockid: 3
         title: Won this year
@@ -58,7 +58,7 @@ pages:
               metricField: amount
               operation: sum
               filter: "stage = 'Won' AND YEAR(closed_at) = YEAR(NOW())"
-              prefix: "$"
+              prefix: "£"
               numberFormat: "0,0"
       - blockid: 4
         title: New leads (30 days)
@@ -276,6 +276,8 @@ pages:
             kind: RecordList
             xywh: [36, 0, 12, 20]
             options:
+              hideImportButton: true
+              allowExport: false
               module: Company
               prefilter: "${record.values.company ? 'recordID = ' + record.values.company : 'recordID = 0'}"
               hideAddButton: true
@@ -285,12 +287,13 @@ pages:
               selectable: false
               fields:
                 - name: name
-                - name: domain
           - blockid: 6
             title: Deals
             kind: RecordList
             xywh: [36, 20, 12, 28]
             options:
+              hideImportButton: true
+              allowExport: false
               module: Deal
               refField: contact
               presort: createdAt DESC
@@ -299,13 +302,14 @@ pages:
               perPage: 5
               fields:
                 - name: name
-                - name: stage
                 - name: amount
           - blockid: 7
             title: Lists
             kind: RecordList
             xywh: [36, 48, 12, 22]
             options:
+              hideImportButton: true
+              allowExport: false
               module: SegmentMember
               refField: contact
               presort: createdAt DESC
@@ -314,19 +318,19 @@ pages:
               perPage: 5
               fields:
                 - name: segment
-                - name: added_at
           - blockid: 8
             title: Addresses
             kind: RecordList
             xywh: [36, 70, 12, 20]
             options:
+              hideImportButton: true
+              allowExport: false
               module: ContactAddress
               refField: contact
               hideSearch: true
               selectable: false
               perPage: 5
               fields:
-                - name: address_type
                 - name: city
                 - name: country
           - blockid: 9
@@ -792,6 +796,8 @@ pages:
             kind: RecordList
             xywh: [36, 0, 12, 72]
             options:
+              hideImportButton: true
+              allowExport: false
               module: Contact
               refField: company
               presort: full_name ASC
@@ -806,6 +812,8 @@ pages:
             kind: RecordList
             xywh: [36, 72, 12, 73]
             options:
+              hideImportButton: true
+              allowExport: false
               module: Deal
               refField: company
               presort: createdAt DESC
@@ -885,7 +893,7 @@ pages:
               metricField: amount
               operation: sum
               filter: "stage != 'Won' AND stage != 'Lost'"
-              prefix: "$"
+              prefix: "£"
               numberFormat: "0,0"
       - blockid: 2
         title: Weighted forecast
@@ -898,7 +906,7 @@ pages:
               metricField: forecast_amount
               operation: sum
               filter: "stage != 'Won' AND stage != 'Lost'"
-              prefix: "$"
+              prefix: "£"
               numberFormat: "0,0"
       - blockid: 3
         title: Open deals
@@ -1076,6 +1084,8 @@ pages:
             kind: RecordList
             xywh: [36, 0, 12, 20]
             options:
+              hideImportButton: true
+              allowExport: false
               module: Contact
               prefilter: "${record.values.contact ? 'recordID = ' + record.values.contact : 'recordID = 0'}"
               hideAddButton: true
@@ -1090,6 +1100,8 @@ pages:
             kind: RecordList
             xywh: [36, 20, 12, 20]
             options:
+              hideImportButton: true
+              allowExport: false
               module: Company
               prefilter: "${record.values.company ? 'recordID = ' + record.values.company : 'recordID = 0'}"
               hideAddButton: true
@@ -1709,6 +1721,8 @@ pages:
             kind: RecordList
             xywh: [0, 14, 14, 80]
             options:
+              hideImportButton: true
+              allowExport: false
               module: EmailFolder
               presort: name ASC
               perPage: 50

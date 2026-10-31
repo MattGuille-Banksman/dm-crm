@@ -63,7 +63,7 @@ modules:
         label: Annual revenue
         kind: Number
         options:
-          prefix: "$"
+          prefix: "£"
           precision: 0
       phone:
         label: Phone
@@ -231,11 +231,11 @@ modules:
       open_pipeline:
         label: Open pipeline value
         kind: Number
-        options: { prefix: "$", precision: 0 }
+        options: { prefix: "£", precision: 0 }
       won_revenue:
         label: Won revenue
         kind: Number
-        options: { prefix: "$", precision: 0 }
+        options: { prefix: "£", precision: 0 }
       emails_sent_count:
         label: Marketing emails sent
         kind: Number
@@ -350,7 +350,7 @@ modules:
         label: Amount
         kind: Number
         options:
-          prefix: "$"
+          prefix: "£"
           precision: 2
       currency:
         label: Currency
@@ -386,7 +386,7 @@ modules:
         label: Weighted amount
         kind: Number
         options:
-          prefix: "$"
+          prefix: "£"
           precision: 2
       close_date:
         label: Expected close date

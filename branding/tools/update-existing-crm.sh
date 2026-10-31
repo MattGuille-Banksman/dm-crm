@@ -116,10 +116,7 @@ q "insert into rbac_rules (rel_role, resource, operation, access)
 q "update automation_workflows set run_as = (select id from users where email = '$ADMIN' and deleted_at is null) where handle in ('crm_campaign_generate_content', 'crm_contacts_tidy_imports');"
 
 echo "== 4/4 branding settings and restart"
-if [ "$DB" = corteza ]; then
-  # settings are written through the main compose service
-  bash "$TOOLS/apply-branding-settings.sh"
-fi
+BRANDING_CONTAINER=$CONTAINER bash "$TOOLS/apply-branding-settings.sh"
 on_target "$DOCKER restart $CONTAINER" > /dev/null
 wait_healthy
 

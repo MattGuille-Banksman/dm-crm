@@ -334,6 +334,10 @@ DM-CRM changes are marked `DM-CRM` in the source:
   marked `dmcrm-advanced` are the ones it hides.
 - The admin sidebar no longer lists every chart; the Charts page does.
 
-The look (softer borders, rounded cards, muted field labels, the inline-edit
-pencil shown on hover) is `branding/dm-crm-ui.scss`, applied as the general
-custom CSS by `apply-branding-settings.sh`.
+The look (Userflow-style: Figtree type, white cards with large rounded
+corners, pill buttons, indigo-tinted navigation and badges, the inline-edit
+pencil shown on hover, slimmed narrow lists) is `branding/dm-crm-ui.scss`,
+applied as the general custom CSS by `apply-branding-settings.sh`, which
+also adds the "DM-CRM font (Figtree)" code snippet that loads the font from
+Google Fonts. The update script applies it to the container it updates
+(`BRANDING_CONTAINER`), so rehearsals get it too.

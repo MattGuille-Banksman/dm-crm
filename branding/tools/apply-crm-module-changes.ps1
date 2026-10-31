@@ -30,7 +30,14 @@ function Invoke-Api($method, $path, $body) {
         $json = $body | ConvertTo-Json -Depth 30 -Compress
         $params.Body = [System.Text.Encoding]::UTF8.GetBytes($json)
     }
-    $res = Invoke-RestMethod @params
+    # decode the response as UTF-8 ourselves: PowerShell 5 assumes Latin-1 when
+    # the server sends no charset, which would garble the pound sign on the
+    # next save
+    $raw = Invoke-WebRequest @params -UseBasicParsing
+    $stream = New-Object System.IO.MemoryStream
+    $raw.RawContentStream.Position = 0
+    $raw.RawContentStream.CopyTo($stream)
+    $res = [System.Text.Encoding]::UTF8.GetString($stream.ToArray()) | ConvertFrom-Json
     if ($res.error) { throw "API error on $method ${path}: $($res.error.message)" }
     return $res.response
 }
@@ -93,7 +100,10 @@ function Update-Module($handle, $newFields, [scriptblock] $tweak = $null) {
 $contact = Find-Module 'Contact'
 $userOpts = @{ presetWithAuthenticated = $true }
 $num0 = @{ precision = 0 }
-$money0 = @{ prefix = '$'; precision = 0 }
+# money is shown in pounds; [char]0x00A3 keeps the script ASCII (PowerShell 5 reads
+# BOM-less files as ANSI)
+$pound = [string][char]0x00A3
+$money0 = @{ prefix = $pound; precision = 0 }
 $relative = @{ outputRelative = $true }
 
 # --- new modules -------------------------------------------------------------
@@ -220,5 +230,22 @@ Update-Module 'EmailCampaign' @(
 Update-Module 'AutomationRun' @(
     (F 'segment' 'Record' 'Segment' (RecordOpts $segment.moduleID 'name' @('name')))
 )
+
+# --- currency ------------------------------------------------------------------
+# Number fields that still show dollars switch to pounds
+foreach ($m in Get-Modules) {
+    $full = Invoke-Api GET "/namespace/$nsID/module/$($m.moduleID)" $null
+    $changed = @()
+    foreach ($fld in $full.fields) {
+        if ($fld.kind -eq 'Number' -and $fld.options.prefix -eq '$') {
+            $fld.options.prefix = $pound
+            $changed += $fld.name
+        }
+    }
+    if ($changed.Count) {
+        [void](Invoke-Api POST "/namespace/$nsID/module/$($m.moduleID)" $full)
+        Write-Host "~ $($m.handle) currency: $($changed -join ', ')"
+    }
+}
 
 Write-Host 'Module changes applied.'

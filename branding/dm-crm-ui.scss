@@ -1,4 +1,4 @@
-/* DM-CRM UI v1
+/* DM-CRM UI v2
  *
  * Applied as the "general" custom CSS (Admin Area > User interface >
  * Custom CSS) by branding/tools/apply-branding-settings.sh. It is compiled
@@ -6,55 +6,202 @@
  * the light and dark theme. Remove this first line before editing it in
  * the admin area, otherwise the script will overwrite your changes.
  *
- * Aim: a lighter SaaS look - fewer, softer borders, rounded cards, clearer
- * type hierarchy.
+ * Look: Userflow-style SaaS - Figtree type, deep navy text, white cards
+ * with large rounded corners and no hard borders, pill buttons, soft
+ * indigo highlights. Figtree is loaded by the "DM-CRM font" code snippet;
+ * without it the system font is used.
  */
 
+$dm-font: Figtree, Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+$dm-radius-card: 16px;
+$dm-radius-control: 10px;
+$dm-hairline: rgba(100, 116, 139, 0.16);
+$dm-tint: rgba(79, 70, 229, 0.08);
+$dm-tint-strong: rgba(79, 70, 229, 0.14);
+
+/* ---------------------------------------------------------------- type */
+
+/* the base theme sets a separate Poppins family per weight, so every
+   element gets the one family and its weight is set explicitly below */
+body,
+body *:not(code):not(pre):not(kbd):not(samp):not(svg):not(path):not([class*="ace_"]):not([class*="CodeMirror"]):not([class*="monaco"]) {
+  font-family: $dm-font !important;
+}
+
 body {
-  font-family: Inter, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-size: 0.875rem;
+  letter-spacing: -0.005em;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-h1, h2, h3, h4, h5, h6 {
-  font-weight: 600;
-  letter-spacing: -0.01em;
+svg text {
+  font-family: $dm-font !important;
 }
 
-/* blocks: soft cards with a hairline border */
+h1, h2, h3, h4, h5, h6, .h1, .h2, .h3, .h4, .h5, .h6 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+b, strong, th, .badge, .btn, label, legend, .nav-link, .nav-item, .dropdown-header {
+  font-weight: 600;
+}
+
+/* page title in the top bar */
+.header-navigation h2.title {
+  font-size: 1.45rem !important;
+  font-weight: 700;
+  letter-spacing: -0.025em;
+}
+
+.header-navigation {
+  padding-top: 0.9rem !important;
+  padding-bottom: 0.6rem !important;
+}
+
+/* ------------------------------------------------------------- sidebar */
+
+.b-sidebar.sidebar {
+  background: var(--white) !important;
+  box-shadow: none !important;
+  border-right: 1px solid $dm-hairline;
+}
+
+.b-sidebar.sidebar .nav-item {
+  padding: 0.45rem 0.75rem !important;
+  border-radius: $dm-radius-control !important;
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--black) !important;
+  opacity: 0.86;
+  transition: background-color 0.12s ease, color 0.12s ease;
+}
+
+.b-sidebar.sidebar .nav-item:hover {
+  background: $dm-tint !important;
+  opacity: 1;
+}
+
+.b-sidebar.sidebar .nav-item.nav-active,
+.b-sidebar.sidebar .nav-item.nav-exact-active {
+  background: $dm-tint-strong !important;
+  color: var(--primary) !important;
+  font-weight: 600;
+  opacity: 1;
+}
+
+.b-sidebar.sidebar .nav-item.nav-active label,
+.b-sidebar.sidebar .nav-item.nav-exact-active label {
+  color: var(--primary) !important;
+}
+
+/* ---------------------------------------------------------------- cards */
+
 .card {
-  border: 1px solid var(--extra-light) !important;
-  border-radius: 12px !important;
-  box-shadow: 0 1px 2px rgba(16, 24, 40, 0.04) !important;
+  border: 1px solid $dm-hairline !important;
+  border-radius: $dm-radius-card !important;
+  box-shadow: 0 1px 2px rgba(11, 16, 38, 0.04), 0 4px 16px rgba(11, 16, 38, 0.03) !important;
 }
 
 .card-header {
   background: transparent !important;
-  border-bottom: 1px solid var(--extra-light) !important;
-  padding: 0.75rem 1rem !important;
+  border-bottom: 0 !important;
+  padding: 1rem 1.25rem 0.35rem !important;
 }
 
 .card-header h5 {
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.98rem;
+  font-weight: 700;
+  letter-spacing: -0.015em;
+}
+
+.card-body {
+  border-radius: 0 0 $dm-radius-card $dm-radius-card;
 }
 
 .card-footer {
   background: transparent !important;
-  border-top: 1px solid var(--extra-light) !important;
+  border-top: 1px solid $dm-hairline !important;
 }
 
-/* record fields: muted labels, values in the body colour */
+/* ------------------------------------------------------------- buttons */
+
+.btn {
+  border-radius: 999px !important;
+  font-weight: 600;
+  letter-spacing: -0.005em;
+  box-shadow: none !important;
+}
+
+.btn-lg {
+  font-size: 0.875rem !important;
+  padding: 0.5rem 1.1rem !important;
+}
+
+.btn-primary {
+  background-color: var(--primary);
+  border-color: var(--primary);
+}
+
+.btn-primary:hover,
+.btn-primary:focus {
+  filter: brightness(0.92);
+}
+
+.btn-light,
+.btn-extra-light {
+  background-color: $dm-tint !important;
+  border-color: transparent !important;
+  color: var(--primary) !important;
+}
+
+.btn-light:hover,
+.btn-extra-light:hover {
+  background-color: $dm-tint-strong !important;
+}
+
+/* icon-only and table action buttons stay compact */
+.btn-sm {
+  padding: 0.25rem 0.7rem;
+}
+
+/* ---------------------------------------------------------- form fields */
+
+.form-control,
+.custom-select,
+.vs__dropdown-toggle,
+.input-group-text {
+  border-radius: $dm-radius-control !important;
+  border-color: $dm-hairline !important;
+  box-shadow: none !important;
+}
+
+.input-group > .form-control:not(:last-child),
+.input-group > .vs__dropdown-toggle:not(:last-child) {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+}
+
+.input-group > .input-group-append > .btn,
+.input-group > .input-group-append > .input-group-text {
+  border-radius: 0 $dm-radius-control $dm-radius-control 0 !important;
+}
+
+.form-control:focus,
+.vs--open .vs__dropdown-toggle {
+  border-color: var(--primary) !important;
+  box-shadow: 0 0 0 3px $dm-tint-strong !important;
+}
+
+/* record fields: small muted labels, values in the body colour */
 .field-container > label,
-.field-container legend {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--secondary) !important;
-}
-
+.field-container legend,
 .field-container .text-primary {
+  font-size: 0.75rem !important;
+  font-weight: 600;
   color: var(--secondary) !important;
+  letter-spacing: 0.01em;
 }
 
 /* inline editing: the pencil only shows when hovering over a field */
@@ -68,67 +215,116 @@ h1, h2, h3, h4, h5, h6 {
   opacity: 1;
 }
 
-/* tables: light header row, hairline row dividers */
+/* --------------------------------------------------------------- tables */
+
 .table thead th {
-  font-size: 0.72rem;
-  font-weight: 600;
+  font-size: 0.7rem !important;
+  font-weight: 700;
   text-transform: uppercase;
-  letter-spacing: 0.04em;
-  color: var(--secondary);
+  letter-spacing: 0.05em;
+  color: var(--secondary) !important;
+  background: transparent;
   border-top: 0 !important;
-  border-bottom: 1px solid var(--extra-light) !important;
+  border-bottom: 1px solid $dm-hairline !important;
 }
 
 .table td {
-  border-color: var(--extra-light) !important;
+  border-color: $dm-hairline !important;
   vertical-align: middle;
 }
 
 .table-hover tbody tr:hover {
-  background-color: var(--light);
+  background-color: $dm-tint !important;
 }
 
-/* controls */
-.btn {
-  border-radius: 8px;
-  font-weight: 500;
-}
-
-.btn-sm {
-  border-radius: 6px;
-}
-
-.form-control,
-.custom-select,
-.vs__dropdown-toggle {
-  border-radius: 8px !important;
-  border-color: var(--extra-light) !important;
-}
-
-.form-control:focus {
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15) !important;
-  border-color: var(--primary) !important;
-}
+/* ------------------------------------------------------- badges & menus */
 
 .badge {
   border-radius: 999px;
-  font-weight: 500;
-  padding: 0.3em 0.65em;
-}
-
-/* top bar and sidebar */
-header .navbar,
-.topbar {
-  border-bottom: 1px solid var(--extra-light);
-}
-
-.sidebar .nav-link,
-.sidebar a {
-  border-radius: 8px;
+  font-weight: 600;
+  padding: 0.32em 0.7em;
 }
 
 .dropdown-menu {
-  border: 1px solid var(--extra-light);
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(16, 24, 40, 0.08);
+  border: 1px solid $dm-hairline !important;
+  border-radius: 12px !important;
+  box-shadow: 0 12px 32px rgba(11, 16, 38, 0.12) !important;
+  padding: 0.35rem !important;
+}
+
+.dropdown-item {
+  border-radius: 8px;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: $dm-tint !important;
+}
+
+.modal-content {
+  border: 0 !important;
+  border-radius: 18px !important;
+  box-shadow: 0 24px 64px rgba(11, 16, 38, 0.2) !important;
+}
+
+.modal-header,
+.modal-footer {
+  border-color: $dm-hairline !important;
+}
+
+/* --------------------------------------------- record page action bar */
+
+.record-toolbar,
+footer.bg-white,
+.toolbar-footer {
+  border-top: 1px solid $dm-hairline !important;
+  box-shadow: none !important;
+}
+
+/* thin scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: rgba(100, 116, 139, 0.35) transparent;
+}
+
+/* -------------------------------------------------------------- metrics */
+
+/* metric numbers are drawn as SVG text */
+.vue-grid-item .text-center > svg text {
+  font-weight: 700 !important;
+  letter-spacing: -0.03em;
+}
+
+/* select values shown as badges: the default grey becomes an indigo tint */
+.badge[style*="var(--extra-light)"] {
+  background-color: $dm-tint-strong !important;
+  color: var(--primary) !important;
+}
+
+td .badge,
+.field-container .badge {
+  font-size: 0.75rem !important;
+}
+
+/* --------------------------------------------------------- narrow lists */
+
+/* lists in narrow boxes (the right-hand column of record pages): no
+   duplicate "no records" message (the footer counts them), no sort and
+   filter icons, no sideways scrolling */
+.vue-grid-item .card {
+  container-type: inline-size;
+}
+
+@container (max-width: 380px) {
+  .record-list-table table > .position-absolute.text-center {
+    display: none !important;
+  }
+
+  .record-list-table thead th .d-flex > *:not(:first-child) {
+    display: none !important;
+  }
+
+  .record-list-table {
+    overflow-x: hidden !important;
+  }
 }
